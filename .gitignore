@@ -1,0 +1,32 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+env/
+
+# maturin / wheels
+*.whl
+wheels/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+CLAUDE.md
+.claude/

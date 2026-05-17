@@ -1,0 +1,430 @@
+//====== playtow/src/math/default_constants.json ======//
+//!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
+//!
+//!This code is the intellectual property of Andrew Keith Watts. Unauthorized
+//!reproduction, distribution, or modification of this code, in whole or in part,
+//!without the express written permission of Andrew Keith Watts is strictly prohibited.
+//!
+//!For inquiries, please contact AndrewKWatts@gmail.com.
+
+[
+  {
+    "name": "Pi",
+    "symbol": "π",
+    "cached_value": 3.141592653589793,
+    "allow_simplification": false,
+    "enabled": true,
+    "use_expression": false
+  },
+  {
+    "name": "Euler's number",
+    "symbol": "e",
+    "cached_value": 2.718281828459045,
+    "allow_simplification": false,
+    "enabled": true,
+    "use_expression": false
+  },
+  {
+    "name": "Euler-Mascheroni constant",
+    "symbol": "γ",
+    "cached_value": 0.5772156649015329,
+    "allow_simplification": false,
+    "enabled": true
+  },
+  {
+    "name": "Golden ratio",
+    "symbol": "φ",
+    "cached_value": 1.618033988749895,
+    "allow_simplification": false,
+	"enabled": true,
+    "use_expression": true,
+    "expression": {
+      "Function": [
+        "Divide",
+        [
+          {
+            "Function": [
+              "Add",
+              [
+                {"Number": {"value": {"flags": 0, "value": [1], "scale": [0]}}},
+                {
+                  "Function": [
+                    "Sqrt",
+                    [{"Number": {"value": {"flags": 0, "value": [5], "scale": [0]}}}]
+                  ]
+                }
+              ]
+            ]
+          },
+          {"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}}
+        ]
+      ]
+    },
+    "_comment": "φ = (1 + √5) / 2"
+  },
+  {
+    "name": "Square root of 2",
+    "symbol": "√2",
+    "cached_value": 1.4142135623730951,
+    "allow_simplification": true,
+	"enabled": true,
+    "use_expression": true,
+    "expression": {
+      "Function": [
+        "Sqrt",
+        [{"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}}]
+      ]
+    }
+  },
+  {
+    "name": "Square root of 3",
+    "symbol": "√3",
+    "cached_value": 1.7320508075688772,
+    "allow_simplification": true,
+	"enabled": true,
+    "expression": {
+      "Function": [
+        "Sqrt",
+        [{"Number": {"value": {"flags": 0, "value": [3], "scale": [0]}}}]
+      ]
+    }
+  },
+  {
+    "name": "Natural log of 2",
+    "symbol": "ln(2)",
+    "cached_value": 0.6931471805599453,
+    "allow_simplification": true,
+	"enabled": true,
+    "expression": {
+      "Function": [
+        "Ln",
+        [{"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}}]
+      ]
+    }
+  },
+  {
+    "name": "Catalan's constant",
+    "symbol": "G",
+    "cached_value": 0.915965594177219,
+    "allow_simplification": false,
+	"enabled": true,
+    "expression": {
+      "Sum": {
+        "variable": "n",
+        "start": {"Number": {"value": {"flags": 0, "value": [0], "scale": [0]}}},
+        "end": {"Constant": {"name": "Infinity", "symbol": "∞", "cached_value": null, "allow_simplification": false}},
+        "expression": {
+          "Function": [
+            "Divide",
+            [
+              {
+                "Function": [
+                  "Power",
+                  [
+                    {"Number": {"value": {"flags": 1, "value": [1], "scale": [0]}}},
+                    {"Variable": "n"}
+                  ]
+                ]
+              },
+              {
+                "Function": [
+                  "Power",
+                  [
+                    {
+                      "Function": [
+                        "Add",
+                        [
+                          {
+                            "Function": [
+                              "Multiply",
+                              [
+                                {"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}},
+                                {"Variable": "n"}
+                              ]
+                            ]
+                          },
+                          {"Number": {"value": {"flags": 0, "value": [1], "scale": [0]}}}
+                        ]
+                      ]
+                    },
+                    {"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}}
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    "_comment": "G = Σ(n=0 to ∞) [(-1)^n / (2n+1)²]"
+  },
+  {
+    "name": "Apéry's constant",
+    "symbol": "ζ(3)",
+    "cached_value": 1.2020569031595942,
+    "allow_simplification": false,
+	"enabled": true
+  },
+  {
+    "name": "Square root of 5",
+    "symbol": "√5",
+    "cached_value": 2.23606797749979,
+    "allow_simplification": true,
+	"enabled": true,
+    "expression": {
+      "Function": [
+        "Sqrt",
+        [{"Number": {"value": {"flags": 0, "value": [5], "scale": [0]}}}]
+      ]
+    }
+  },
+  {
+    "name": "Tau (2π)",
+    "symbol": "τ",
+    "cached_value": 6.283185307179586,
+    "allow_simplification": false,
+	"enabled": true,
+    "use_expression": true,
+    "expression": {
+      "Function": [
+        "Multiply",
+        [
+          {"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}},
+          {"Constant": {"name": "Pi", "symbol": "π", "cached_value": 3.141592653589793, "allow_simplification": false}}
+        ]
+      ]
+    },
+    "_comment": "τ = 2π"
+  },
+  {
+    "name": "Feigenbaum constant delta",
+    "symbol": "δ",
+    "cached_value": 4.669201609102990,
+    "allow_simplification": false,
+	"enabled": true,
+    "_comment": "No closed-form expression known"
+  },
+  {
+    "name": "Feigenbaum constant alpha",
+    "symbol": "α_F",
+    "cached_value": 2.502907875095892,
+    "allow_simplification": false,
+	"enabled": true
+  },
+  {
+    "name": "Conway's constant",
+    "symbol": "λ",
+    "cached_value": 1.303577269034296,
+    "allow_simplification": false,
+	"enabled": true
+  },
+  {
+    "name": "Khinchin's constant",
+    "symbol": "K",
+    "cached_value": 2.685452001065306,
+    "allow_simplification": false,
+	"enabled": true
+  },
+  {
+    "name": "Glaisher-Kinkelin constant",
+    "symbol": "A",
+    "cached_value": 1.282427129100623,
+    "allow_simplification": false,
+	"enabled": true
+  },
+  {
+    "name": "Backhouse's constant",
+    "symbol": "B",
+    "cached_value": 1.456074948582690,
+    "allow_simplification": false,
+	"enabled": true
+  },
+  {
+    "name": "Liouville's constant",
+    "symbol": "L",
+    "cached_value": 0.110001000000000000000001,
+    "allow_simplification": true,
+	"enabled": true,
+    "_comment": "L = Σ(n=1 to ∞) 10^(-n!)"
+  },
+  {
+    "name": "Champernowne constant",
+    "symbol": "C_10",
+    "cached_value": 0.123456789101112131415161718,
+    "allow_simplification": false,
+	"enabled": true
+  },
+  {
+    "name": "Salem constant",
+    "symbol": "σ",
+    "cached_value": 1.176280818259917,
+    "allow_simplification": false,
+	"enabled": true
+  },
+  {
+    "name": "Plastic number",
+    "symbol": "ρ",
+    "cached_value": 1.324717957244746,
+    "allow_simplification": false,
+	"enabled": true,
+    "_comment": "Real root of x³ = x + 1"
+  },
+  {
+    "name": "Gelfond's constant",
+    "symbol": "eToPowπ",
+    "cached_value": 23.14069263277926,
+    "allow_simplification": true,
+	"enabled": true,
+    "expression": {
+      "Function": [
+        "Exp",
+        [{"Constant": {"name": "Pi", "symbol": "π", "cached_value": 3.141592653589793, "allow_simplification": false}}]
+      ]
+    }
+  },
+  {
+    "name": "Gelfond-Schneider constant",
+    "symbol": "twoToPowSqrtTwo",
+    "cached_value": 2.6651441426902251,
+    "allow_simplification": true,
+	"enabled": true,
+    "expression": {
+      "Function": [
+        "Power",
+        [
+          {"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}},
+          {"Constant": {"name": "Square root of 2", "symbol": "√2", "cached_value": 1.4142135623730951, "allow_simplification": true}}
+        ]
+      ]
+    }
+  },
+  {
+    "name": "Psi (Digamma of 1)",
+    "symbol": "ψ(1)",
+    "cached_value": -0.5772156649015329,
+    "allow_simplification": false,
+	"enabled": true,
+    "expression": {
+      "Function": [
+        "Negate",
+        [{"Constant": {"name": "Euler-Mascheroni constant", "symbol": "γ", "cached_value": 0.5772156649015329, "allow_simplification": false}}]
+      ]
+    },
+    "_comment": "ψ(1) = -γ"
+  },
+  {
+    "name": "Square root of π",
+    "symbol": "√π",
+    "cached_value": 1.7724538509055160,
+    "allow_simplification": true,
+	"enabled": true,
+    "expression": {
+      "Function": [
+        "Sqrt",
+        [{"Constant": {"name": "Pi", "symbol": "π", "cached_value": 3.141592653589793, "allow_simplification": false}}]
+      ]
+    }
+  },
+  {
+    "name": "Pi over 2",
+    "symbol": "πhalf",
+    "cached_value": 1.5707963267948966,
+    "allow_simplification": true,
+	"enabled": true,
+    "use_expression": true,
+    "expression": {
+      "Function": [
+        "Divide",
+        [
+          {"Constant": {"name": "Pi", "symbol": "π", "cached_value": 3.141592653589793, "allow_simplification": false}},
+          {"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}}
+        ]
+      ]
+    },
+    "_comment": "π/2"
+  },
+  {
+    "name": "Pi over 3", 
+    "symbol": "πthird",
+    "cached_value": 1.0471975511965979,
+    "allow_simplification": true,
+	"enabled": true,
+    "use_expression": true,
+    "expression": {
+      "Function": [
+        "Divide",
+        [
+          {"Constant": {"name": "Pi", "symbol": "π", "cached_value": 3.141592653589793, "allow_simplification": false}},
+          {"Number": {"value": {"flags": 0, "value": [3], "scale": [0]}}}
+        ]
+      ]
+    },
+    "_comment": "π/3"
+  },
+  {
+    "name": "Pi over 4",
+    "symbol": "πquarter", 
+    "cached_value": 0.7853981633974483,
+    "allow_simplification": true,
+	"enabled": true,
+    "use_expression": true,
+    "expression": {
+      "Function": [
+        "Divide",
+        [
+          {"Constant": {"name": "Pi", "symbol": "π", "cached_value": 3.141592653589793, "allow_simplification": false}},
+          {"Number": {"value": {"flags": 0, "value": [4], "scale": [0]}}}
+        ]
+      ]
+    },
+    "_comment": "π/4"
+  },
+  {
+    "name": "Four thirds pi",
+    "symbol": "πfourThirds",
+    "cached_value": 4.188790204786391,
+    "allow_simplification": true,
+	"enabled": true,
+    "use_expression": true,
+    "expression": {
+      "Function": [
+        "Divide",
+        [
+          {"Function": [
+            "Multiply",
+            [
+              {"Number": {"value": {"flags": 0, "value": [4], "scale": [0]}}},
+              {"Constant": {"name": "Pi", "symbol": "π", "cached_value": 3.141592653589793, "allow_simplification": false}}
+            ]
+          ]},
+          {"Number": {"value": {"flags": 0, "value": [3], "scale": [0]}}}
+        ]
+      ]
+    },
+    "_comment": "4π/3"
+  },
+  {
+    "name": "Pi squared over 2",
+    "symbol": "πSquaredHalf",
+    "cached_value": 4.934802200544679,
+    "allow_simplification": true,
+	"enabled": true,
+    "use_expression": true,
+    "expression": {
+      "Function": [
+        "Divide",
+        [
+          {"Function": [
+            "Power",
+            [
+              {"Constant": {"name": "Pi", "symbol": "π", "cached_value": 3.141592653589793, "allow_simplification": false}},
+              {"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}}
+            ]
+          ]},
+          {"Number": {"value": {"flags": 0, "value": [2], "scale": [0]}}}
+        ]
+      ]
+    },
+    "_comment": "π²/2"
+  }
+]

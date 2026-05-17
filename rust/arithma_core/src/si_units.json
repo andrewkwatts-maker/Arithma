@@ -1,0 +1,56 @@
+{
+  "si_units": {
+    "base_units": [
+      {
+        "symbol": "m",
+        "name": "meter",
+        "quantity": "length",
+        "definition": "Base SI unit of length"
+      },
+      {
+        "symbol": "kg", 
+        "name": "kilogram",
+        "quantity": "mass",
+        "definition": "Base SI unit of mass"
+      },
+      {
+        "symbol": "s",
+        "name": "second", 
+        "quantity": "time",
+        "definition": "Base SI unit of time"
+      },
+      {
+        "symbol": "A",
+        "name": "ampere",
+        "quantity": "electric_current", 
+        "definition": "Base SI unit of electric current"
+      },
+      {
+        "symbol": "K",
+        "name": "kelvin",
+        "quantity": "temperature",
+        "definition": "Base SI unit of thermodynamic temperature"
+      },
+      {
+        "symbol": "mol",
+        "name": "mole",
+        "quantity": "amount_of_substance",
+        "definition": "Base SI unit of amount of substance"
+      },
+      {
+        "symbol": "cd",
+        "name": "candela", 
+        "quantity": "luminous_intensity",
+        "definition": "Base SI unit of luminous intensity"
+      }
+    ],
+    "derived_units_info": {
+      "note": "Derived units like m/s, kg⋅m/s², etc. should be represented as PTExpressions",
+      "examples": [
+        "m/s (velocity) = PTExpression::div(PTInteger::with_unit(distance, 'm'), PTInteger::with_unit(time, 's'))",
+        "kg⋅m/s² (force) = PTExpression::mul(PTInteger::with_unit(mass, 'kg'), acceleration_expr)",
+        "m² (area) = PTExpression::pow(PTInteger::with_unit(length, 'm'), PTInteger::from_i64(2))"
+      ]
+    }
+  }
+}

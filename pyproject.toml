@@ -1,0 +1,19 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "arithma"
+version = "2.0.1"
+description = "Arithma — symbolic mathematics engine (Python bindings)"
+requires-python = ">=3.9"
+authors = [
+    { name = "Andrew Keith Watts", email = "AndrewKWatts@gmail.com" },
+]
+license = { text = "Proprietary" }
+
+[tool.maturin]
+manifest-path = "rust/arithma_core/Cargo.toml"
+features = ["python"]
+module-name = "arithma._arithma_core"
+python-source = "python"
