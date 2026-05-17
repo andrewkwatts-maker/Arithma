@@ -22,11 +22,11 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Install maturin and build tools
+      - name: Install build tools
         run: pip install --upgrade pip maturin pytest
 
       - name: Build and install
-        run: maturin develop --features python
+        run: pip install . --no-build-isolation
 
       - name: Run tests
         run: pytest tests/ -v --tb=short
