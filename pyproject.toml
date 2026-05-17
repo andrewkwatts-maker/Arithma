@@ -18,6 +18,9 @@ dev = [
     "pytest-cov",
 ]
 
+[project.scripts]
+arithma-app = "arithma._launcher:launch"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--tb=short"
