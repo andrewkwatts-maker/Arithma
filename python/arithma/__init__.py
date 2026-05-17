@@ -13,7 +13,7 @@ returns ``True`` and ``_HAS_RUST`` is ``True``.  If the extension is absent
 the module still imports successfully.
 """
 
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 
 # ---------------------------------------------------------------------------
 # Optional Rust extension
