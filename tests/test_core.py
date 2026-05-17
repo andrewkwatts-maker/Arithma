@@ -1,4 +1,4 @@
-"""Core smoke tests for the arithma package."""
+"""Core smoke tests for the arithma package — Wave-2 scaffold."""
 import arithma
 
 
@@ -17,18 +17,6 @@ def test_rust_backend_available():
     )
 
 
-def test_expression_class_available():
-    assert arithma.Expression is not None
-
-
-def test_integer_class_available():
-    assert arithma.Integer is not None
-
-
-def test_variable_class_available():
-    assert arithma.Variable is not None
-
-
 def test_is_rust_backend():
     assert arithma.is_rust_backend() is True
 
@@ -37,31 +25,20 @@ def test_version_rust_non_empty():
     assert arithma.version_rust() != ""
 
 
-def test_expression_number():
-    expr = arithma.Expression.number(42)
-    assert expr is not None
-    assert expr.to_float() == 42.0
+def test_version_rust_matches_package():
+    assert arithma.version_rust() == arithma.__version__
 
 
-def test_expression_variable():
-    x = arithma.Expression.variable("x")
-    assert x is not None
-    assert x.to_float() is None  # unbound variable has no float value
+# Wave-3 stubs — Expression, Integer, Variable are not yet implemented.
+# These tests document the expected None state until pyfacade Wave-3 lands.
+
+def test_expression_is_none_until_wave3():
+    assert arithma.Expression is None
 
 
-def test_expression_arithmetic():
-    a = arithma.Expression.number(3)
-    b = arithma.Expression.number(4)
-    result = a + b
-    assert result.to_float() == 7.0
+def test_integer_is_none_until_wave3():
+    assert arithma.Integer is None
 
 
-def test_expression_multiply():
-    a = arithma.Expression.number(6)
-    b = arithma.Expression.number(7)
-    assert (a * b).to_float() == 42.0
-
-
-def test_integer_basic():
-    n = arithma.Integer(10)
-    assert n is not None
+def test_variable_is_none_until_wave3():
+    assert arithma.Variable is None

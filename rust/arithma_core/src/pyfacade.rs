@@ -37,7 +37,7 @@ fn is_rust_backend() -> bool {
 /// `arithma._arithma_core` module entry point. Maturin invokes this through
 /// the `[tool.maturin] module-name` setting in `pyproject.toml`.
 #[pymodule]
-fn _arithmos_core(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _arithma_core(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version_rust, m)?)?;
     m.add_function(wrap_pyfunction!(is_rust_backend, m)?)?;
     Ok(())
