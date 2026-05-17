@@ -1,9 +1,6 @@
 ﻿# Arithmos
 
-Symbolic mathematics engine. Wave 1 scaffold; populated in Wave 2.
-
-Upstream: https://github.com/andrewkwatts-maker/Arithmos.git
-
+Symbolic mathematics engine. 
 ## Layout
 
 - `rust/arithmos_core/` - Rust core crate (cdylib + rlib, optional `python` feature for PyO3)
