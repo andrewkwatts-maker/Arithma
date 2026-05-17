@@ -12,6 +12,12 @@ authors = [
 ]
 license = { file = "LICENSE" }
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov",
+]
+
 [tool.maturin]
 manifest-path = "rust/arithma_core/Cargo.toml"
 features = ["python"]

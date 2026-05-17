@@ -23,10 +23,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install build tools
-        run: pip install --upgrade pip maturin pytest
+        run: pip install --upgrade pip maturin
 
-      - name: Build and install
-        run: pip install . --no-build-isolation
+      - name: Install library with dev deps
+        run: pip install .[dev]
 
       - name: Run tests
         run: pytest tests/ -v --tb=short
