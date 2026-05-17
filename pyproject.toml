@@ -10,7 +10,7 @@ requires-python = ">=3.9"
 authors = [
     { name = "Andrew Keith Watts", email = "AndrewKWatts@gmail.com" },
 ]
-license = { text = "Proprietary" }
+license = { file = "LICENSE" }
 
 [tool.maturin]
 manifest-path = "rust/arithma_core/Cargo.toml"
