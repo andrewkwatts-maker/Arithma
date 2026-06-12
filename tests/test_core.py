@@ -1,9 +1,9 @@
-"""Core smoke tests for the arithma package — Wave-2 scaffold."""
+"""Core smoke tests for the arithma package."""
 import arithma
 
 
 def test_version():
-    assert arithma.__version__ == "2.0.1"
+    assert arithma.__version__ == "2.0.3"
 
 
 def test_has_rust_flag_is_bool():
@@ -29,16 +29,22 @@ def test_version_rust_matches_package():
     assert arithma.version_rust() == arithma.__version__
 
 
-# Wave-3 stubs — Expression, Integer, Variable are not yet implemented.
-# These tests document the expected None state until pyfacade Wave-3 lands.
+# Wave-3 surface — Expression, Integer, Variable are now real PyO3 wrappers.
 
-def test_expression_is_none_until_wave3():
-    assert arithma.Expression is None
-
-
-def test_integer_is_none_until_wave3():
-    assert arithma.Integer is None
+def test_expression_is_wave3_class():
+    assert arithma.Expression is not None
+    # Must be a usable class (instantiable via its factory).
+    x = arithma.Expression.variable("x")
+    assert x is not None
 
 
-def test_variable_is_none_until_wave3():
-    assert arithma.Variable is None
+def test_integer_is_wave3_class():
+    assert arithma.Integer is not None
+    n = arithma.Integer.from_str("1")
+    assert n.value() == 1
+
+
+def test_variable_is_wave3_class():
+    assert arithma.Variable is not None
+    v = arithma.Variable("x")
+    assert v.name == "x"
