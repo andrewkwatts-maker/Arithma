@@ -278,7 +278,24 @@ impl ArithmosExpression {
         {
             return ArithmosExpression::from_i64(rounded as i64);
         }
-        // Fall back to a fixed-scale rational: f â‰ˆ num / 1e9.
+        // Fall back to a fixed-scale rational. Use 1e15 so the rational
+        // representation preserves the full ~15-digit precision of IEEE 754
+        // f64; this is critical for downstream `triple_assert` checks at
+        // rel=1e-12 (regression caught in v2.0.4: the old 1e9 scale
+        // truncated every float literal to 9 decimal places, e.g.
+        // Pi -> 3.141592654 instead of 3.141592653589793).
+        // Falls back to the legacy 1e9 scale for large |f| where 1e15
+        // would overflow i64 (i64::MAX is ~9.2e18, so 1e15 stays safe up
+        // to |f| ~ 9000).
+        const PRECISE_SCALE: f64 = 1.0e15;
+        const PRECISE_MAGNITUDE_BOUND: f64 = 9.0e3;
+        if f.abs() < PRECISE_MAGNITUDE_BOUND {
+            let num = (f * PRECISE_SCALE).round() as i64;
+            return ArithmosExpression::div(
+                ArithmosExpression::from_i64(num),
+                ArithmosExpression::from_i64(PRECISE_SCALE as i64),
+            );
+        }
         let scale: f64 = 1.0e9;
         let num = (f * scale).round() as i64;
         ArithmosExpression::div(

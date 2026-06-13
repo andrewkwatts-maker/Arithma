@@ -3,7 +3,7 @@ import arithma
 
 
 def test_version():
-    assert arithma.__version__ == "2.0.3"
+    assert arithma.__version__ == "2.0.4"
 
 
 def test_has_rust_flag_is_bool():
