@@ -4,6 +4,80 @@ All notable changes to **Arithma** are documented here.
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **The advertised `cpp-support` and `rust-support` features did not compile.**
+  `external/mod.rs` declared `cpp_executor` and `rust_executor`, but neither
+  file existed, so `cargo build --features cpp-support` failed with `E0583`.
+  Both are now real `ArithmosBackend` implementations: `rust_executor` wraps an
+  in-process closure, `cpp_executor` is a C-ABI seam exchanging expressions as
+  JSON. An unbound handler reports `BackendUnavailable` so the router falls
+  through, rather than panicking.
+
+- **The constants registry never registered anything.**
+  `load_constants_from_json` parsed the document, discarded the result and
+  returned `Ok(())`, so `SYMBOL_REGISTRY` was permanently empty and every
+  lookup returned `None`:
+
+      lookup_symbol("π")   ->  None      (correct: Constant, 3.141592653589793)
+
+  It now builds a `Constant` node per entry, skips `enabled: false`, rejects an
+  entry with neither `cached_value` nor `expression`, and returns the count.
+  Registration goes through `reregister_symbol`, so `initialize_defaults()` is
+  genuinely idempotent as its docs claim. 30 constants now register.
+
+- **The SI-unit registry never parsed its catalogue.** `si_units.rs` embedded
+  `si_units.json` with `include_str!` but `REGISTRY` was a hardcoded empty
+  `HashMap`, so `lookup()` always returned `None` and `len()` was always 0.
+  Base and derived units now parse.
+
+- Dead branch in `lookup::math_hash::lookup_exp`: the `is_nan()` arm and the
+  fallback both returned `None`.
+
+- Mojibake (UTF-8 read as CP-1252) across 50 files, some doubly encoded, plus
+  UTF-8 BOMs including one on `rust/arithma_core/Cargo.toml`.
+
+### Added
+
+- `cargo test`, `cargo clippy -- -D warnings` and `cargo fmt --check` now run in
+  CI across the default, `rust-support` and `cpp-support` feature sets. **None
+  of the Rust tests had ever run in CI** — the workflow ran pytest only.
+- `build.bat` / `build.sh` running the same gate locally, then the wheel.
+- `docs/PHASE0.md` — the foundation-repair working brief.
+
+### Changed
+
+- `Cargo.lock` is now committed; this crate publishes a binary artifact and
+  needs reproducible builds.
+- Test count 124 → 132 (138 with `cpp-support`). The new tests assert real
+  values — π, e, φ and the m/kg/s base units resolve — rather than merely
+  asserting that a call did not error, which is what let the two dead
+  registries above ship green.
+
+### Known — not yet changed
+
+- 41 `unimplemented!()` bodies remain (integration, equation solving, root
+  finding, critical points, geometry, probability, Fourier, `Emit`). They panic
+  on call; `grep -rn 'unimplemented!' rust/arithma_core/src` is the work list.
+- `Emit::emit` is still a stub. A complete LaTeX emitter lives in `pyfacade.rs`
+  and is what `to_latex()` actually uses.
+- The `Arithmos*` type prefix survives throughout the source from the pre-rename
+  era; the crate, package and paths are `arithma`.
+- `ArithmosInternalInteger::to_f64` truncates above 2^256, and `from_f64` uses a
+  fixed-scale rational rather than an exact dyadic conversion.
+
+---
+
+## [2.0.2] — 2026-05-17
+
+### Changed
+
+- Version bump for ecosystem tag alignment. No functional change.
+
+---
+
 ## [2.0.1] — 2026-05-17
 
 Ecosystem alignment release. Brings Arithma into lock-step with the
