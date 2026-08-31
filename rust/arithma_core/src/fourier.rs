@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/fourier.rs ======//
+//====== Arithma/rust/arithma_core/src/fourier.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -10,7 +10,7 @@
 //! # Fourier
 //!
 //! Configuration plus the Fourier-transform pipeline. The engine uses this for
-//! material-property baking (Phase 6, Â§E-Periodica) where every periodica
+//! material-property baking (Phase 6, §E-Periodica) where every periodica
 //! property is expanded into a Fourier coefficient texture for fast per-ray
 //! evaluation in shaders.
 
@@ -88,7 +88,7 @@ impl ArithmosFourierTransform {
 
     /// Reconstruct the value at `x` using the truncated Fourier series.
     pub fn evaluate(&self, _x: f64) -> f64 {
-        unimplemented!("ArithmosFourierTransform::evaluate â€” populated in Wave 3")
+        unimplemented!("ArithmosFourierTransform::evaluate — populated in Wave 3")
     }
 }
 

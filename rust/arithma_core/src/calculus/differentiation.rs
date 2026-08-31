@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/calculus/differentiation.rs ======//
+//====== Arithma/rust/arithma_core/src/calculus/differentiation.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -10,7 +10,7 @@
 //! # Differentiation
 //!
 //! Symbolic differentiation of `ArithmosExpression`. Implements the standard
-//! rules â€” sum, difference, product, quotient, chain, and the derivatives of
+//! rules — sum, difference, product, quotient, chain, and the derivatives of
 //! the elementary transcendental functions.
 //!
 //! ## Implementation
@@ -63,7 +63,7 @@ pub fn diff_product(
     ArithmosExpression::add(left, right)
 }
 
-/// Helper: chain rule application â€” `df/dg * dg/dx`.
+/// Helper: chain rule application — `df/dg * dg/dx`.
 ///
 /// For simple known outers (sin/cos/exp/ln/sqrt), the iterative differentiator
 /// already handles the chain rule end-to-end, so this helper is only used by

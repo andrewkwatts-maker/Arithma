@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/constants.rs ======//
+//====== Arithma/rust/arithma_core/src/constants.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -9,15 +9,15 @@
 
 //! # Constants
 //!
-//! Global registry of symbolic constants (Ï€, e, c, h, â€¦). Mirrors
+//! Global registry of symbolic constants (π, e, c, h, …). Mirrors
 //! `pt_arithmos::pt_constants` and embeds `default_constants.json` at compile
 //! time via `include_str!` so the binary is self-contained for PyPI shipping.
 //!
-//! Per CLAUDE.md Â§11 (Constants Management):
+//! Per CLAUDE.md §11 (Constants Management):
 //! - Mathematical constants live in `default_constants.json`.
 //! - Domain-specific constants get their own JSON and are loaded via
 //!   [`load_constants_from_json`].
-//! - Access constants via [`lookup_symbol`] â€” no magic numbers.
+//! - Access constants via [`lookup_symbol`] — no magic numbers.
 
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
@@ -36,7 +36,7 @@ pub struct ArithmosConstantDef {
     /// Friendly name (e.g. "Pi"). Optional.
     #[serde(default)]
     pub name: Option<String>,
-    /// Symbol used in expressions (e.g. "Ï€"). Required.
+    /// Symbol used in expressions (e.g. "π"). Required.
     pub symbol: String,
     /// Optional symbolic expression form.
     #[serde(default)]
@@ -69,7 +69,7 @@ fn default_true() -> bool {
 ///
 /// Constants and variables both live here; lookup-key uniqueness is enforced
 /// at registration time. Access goes through the helper functions in this
-/// module â€” never via `SYMBOL_REGISTRY.write()` directly from outside Arithmos.
+/// module — never via `SYMBOL_REGISTRY.write()` directly from outside Arithmos.
 pub static SYMBOL_REGISTRY: Lazy<RwLock<HashMap<String, ArithmosExpression>>> =
     Lazy::new(|| RwLock::new(HashMap::new()));
 
@@ -83,7 +83,7 @@ pub struct ArithmosConstantConfig {
     pub enable_all_by_default: bool,
 }
 
-/// FaÃ§ade type re-exported as `arithmos_core::ArithmosConstants` â€” a static-only
+/// Façade type re-exported as `arithmos_core::ArithmosConstants` — a static-only
 /// service for downstream code that prefers method calls over free functions.
 pub struct ArithmosConstants;
 
@@ -98,7 +98,7 @@ impl ArithmosConstants {
         register_symbol(symbol, expr)
     }
 
-    /// Initialise the registry from `default_constants.json`. Idempotent â€” safe
+    /// Initialise the registry from `default_constants.json`. Idempotent — safe
     /// to call multiple times.
     pub fn initialize_defaults() -> Result<(), String> {
         load_constants_from_json(DEFAULT_CONSTANTS_JSON)
@@ -135,7 +135,7 @@ pub fn registered_count() -> usize {
 /// so the strict JSON parser accepts it. The PlayTow datasheet convention
 /// (carried over from pt-arithmos) prepends a copyright banner to every
 /// shipped JSON file; rather than maintain a JSONC parser, we strip the
-/// banner here. Bounded by line count for safety-critical Â§2.
+/// banner here. Bounded by line count for safety-critical §2.
 fn strip_jsonc_header(jsonc: &str) -> String {
     let mut out = String::with_capacity(jsonc.len());
     let mut header_done = false;

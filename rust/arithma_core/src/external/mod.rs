@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/external/mod.rs ======//
+//====== Arithma/rust/arithma_core/src/external/mod.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -7,10 +7,10 @@
 //!
 //!For inquiries, please contact AndrewKWatts@Gmail.com
 
-//! External-function registry â€” the integration seam for non-Arithmos backends.
+//! External-function registry — the integration seam for non-Arithmos backends.
 //!
 //! The registry is the foundation of the three-way routing described in plan
-//! Â§B.5: pt-arithmos engine glue, Arithmos (default), and EML-Math co-exist by
+//! §B.5: pt-arithmos engine glue, Arithmos (default), and EML-Math co-exist by
 //! registering themselves as backends here. Downstream plugins (pt-eml-bridge)
 //! call into the registry rather than dispatching directly.
 

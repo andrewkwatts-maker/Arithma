@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/geometry/intersection.rs ======//
+//====== Arithma/rust/arithma_core/src/geometry/intersection.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -27,7 +27,7 @@ pub enum ArithmosIntersectionResult {
     None,
     /// Single hit at the given point.
     Point(ArithmosVector),
-    /// Two hits â€” typical for ray/sphere.
+    /// Two hits — typical for ray/sphere.
     TwoPoints(ArithmosVector, ArithmosVector),
     /// Continuous overlap (e.g. line lies in plane).
     Continuous,
@@ -39,22 +39,22 @@ pub struct ArithmosIntersection;
 impl ArithmosIntersection {
     /// Line vs plane intersection. Wave-2 stub.
     pub fn line_plane(_line: &ArithmosLine, _plane: &ArithmosPlane) -> ArithmosIntersectionResult {
-        unimplemented!("ArithmosIntersection::line_plane â€” populated in Wave 3")
+        unimplemented!("ArithmosIntersection::line_plane — populated in Wave 3")
     }
 
     /// Line vs sphere intersection. Wave-2 stub.
     pub fn line_sphere(_line: &ArithmosLine, _sphere: &ArithmosSphere) -> ArithmosIntersectionResult {
-        unimplemented!("ArithmosIntersection::line_sphere â€” populated in Wave 3")
+        unimplemented!("ArithmosIntersection::line_sphere — populated in Wave 3")
     }
 
     /// Plane vs plane intersection (returns a line). Wave-2 stub.
     pub fn plane_plane(_a: &ArithmosPlane, _b: &ArithmosPlane) -> Option<ArithmosLine> {
-        unimplemented!("ArithmosIntersection::plane_plane â€” populated in Wave 3")
+        unimplemented!("ArithmosIntersection::plane_plane — populated in Wave 3")
     }
 
     /// Closest-point parameter `t` on a line for a target point.
     pub fn closest_point_param(_line: &ArithmosLine, _point: &ArithmosVector) -> ArithmosExpression {
-        unimplemented!("ArithmosIntersection::closest_point_param â€” populated in Wave 3")
+        unimplemented!("ArithmosIntersection::closest_point_param — populated in Wave 3")
     }
 }
 

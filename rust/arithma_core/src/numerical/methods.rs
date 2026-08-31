@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/numerical/methods.rs ======//
+//====== Arithma/rust/arithma_core/src/numerical/methods.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -30,7 +30,7 @@ pub fn solve_with_method(
     _method: ArithmosNumericalMethod,
     _initial: f64,
 ) -> Result<f64, String> {
-    unimplemented!("solve_with_method â€” populated in Wave 3")
+    unimplemented!("solve_with_method — populated in Wave 3")
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-﻿# Arithmos
+# Arithmos
 
 Symbolic mathematics engine. 
 ## Layout

@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/expression/iterative.rs ======//
+//====== Arithma/rust/arithma_core/src/expression/iterative.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -16,8 +16,8 @@
 //!
 //! Two flavours:
 //!
-//! - [`ArithmosIterativeSimplifier`] â€” stateful simplifier with a work queue.
-//! - [`simplify_iterative`] â€” convenience function that owns its simplifier.
+//! - [`ArithmosIterativeSimplifier`] — stateful simplifier with a work queue.
+//! - [`simplify_iterative`] — convenience function that owns its simplifier.
 
 use crate::expression::{ArithmosExpression, SimplificationConfig};
 

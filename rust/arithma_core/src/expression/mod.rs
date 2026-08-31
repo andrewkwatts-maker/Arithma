@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/expression/mod.rs ======//
+//====== Arithma/rust/arithma_core/src/expression/mod.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -14,36 +14,36 @@
 //!
 //! ## Variants (mirrors `pt_arithmos::PTExpression` post-rename)
 //!
-//! - `Number(ArithmosInteger)` â€” an exact integer literal (also represents
+//! - `Number(ArithmosInteger)` — an exact integer literal (also represents
 //!   rationals via `Function::Divide` of two numbers and special values such as
 //!   NaN / infinity through internal flags).
-//! - `Constant { â€¦ }` â€” a named symbolic constant (Ï€, e, c, h, â€¦) with an
+//! - `Constant { … }` — a named symbolic constant (π, e, c, h, …) with an
 //!   optional cached f64, optional unit and optional SI prefix.
-//! - `Variable(String)` â€” a free symbol bound at evaluation time.
-//! - `Function(ArithmosFunction, Vec<â€¦>)` â€” the catch-all node for both binary /
+//! - `Variable(String)` — a free symbol bound at evaluation time.
+//! - `Function(ArithmosFunction, Vec<…>)` — the catch-all node for both binary /
 //!   unary operators (Add, Sub, Mul, Div, Pow, Neg, Inv, Sqrt) and transcendental
-//!   functions (Exp, Ln, Sin, Cos, Tan, Asin, Acos, Atan, Sinh, Cosh, Tanh, â€¦).
-//! - `Sum`, `Product`, `Limit` â€” bounded ranges and limits (ranges).
-//! - `Conditional` â€” if-then-else.
-//! - `CachedValue` â€” performance cache with a dirty-flag (per CLAUDE.md Â§4).
-//! - `FourierOptimized` â€” Fourier-transform-backed evaluation pathway.
+//!   functions (Exp, Ln, Sin, Cos, Tan, Asin, Acos, Atan, Sinh, Cosh, Tanh, …).
+//! - `Sum`, `Product`, `Limit` — bounded ranges and limits (ranges).
+//! - `Conditional` — if-then-else.
+//! - `CachedValue` — performance cache with a dirty-flag (per CLAUDE.md §4).
+//! - `FourierOptimized` — Fourier-transform-backed evaluation pathway.
 //!
 //! ## Core traits
 //!
 //! Four traits expose Arithmos's behaviour polymorphically so downstream code can
 //! be written against abstractions instead of the AST directly:
 //!
-//! - [`Simplify`] â€” pure simplification. Drives both the compile-time and the
+//! - [`Simplify`] — pure simplification. Drives both the compile-time and the
 //!   iterative simplifier passes in the [`simplify`] and [`iterative`] submodules.
-//! - [`Differentiable`] â€” symbolic differentiation; the core of [`crate::calculus`].
-//! - [`Evaluable`] â€” numeric evaluation against a binding context.
-//! - [`Emit`] â€” string-target codegen (GLSL, HLSL, MathML, LaTeX, plain text).
+//! - [`Differentiable`] — symbolic differentiation; the core of [`crate::calculus`].
+//! - [`Evaluable`] — numeric evaluation against a binding context.
+//! - [`Emit`] — string-target codegen (GLSL, HLSL, MathML, LaTeX, plain text).
 //!
 //! ## Submodules
 //!
-//! - [`iterative`] â€” stack-based, iterative simplification passes (no recursion;
+//! - [`iterative`] — stack-based, iterative simplification passes (no recursion;
 //!   per the engine's safety-critical standard "avoid recursion").
-//! - [`simplify`] â€” compile-time and runtime simplification rules driven by the
+//! - [`simplify`] — compile-time and runtime simplification rules driven by the
 //!   `SimplificationConfig` policy.
 
 pub mod iterative;
@@ -152,7 +152,7 @@ pub enum ArithmosExpression {
     /// Exact integer or rational literal.
     Number(ArithmosInteger),
 
-    /// Named symbolic constant (Ï€, e, c, h, ...).
+    /// Named symbolic constant (π, e, c, h, ...).
     Constant {
         #[serde(skip_serializing_if = "Option::is_none")]
         name: Option<String>,
@@ -209,7 +209,7 @@ pub enum ArithmosExpression {
         else_expr: Box<ArithmosExpression>,
     },
 
-    /// Cached f64 result with an explicit dirty flag (CLAUDE.md Â§4).
+    /// Cached f64 result with an explicit dirty flag (CLAUDE.md §4).
     #[serde(skip)]
     CachedValue {
         expr: Box<ArithmosExpression>,
@@ -424,7 +424,7 @@ pub struct ArithmosComplexityMetrics {
 }
 
 // ============================================================================
-// Core traits â€” the abstraction layer per CLAUDE.md SOLID compliance.
+// Core traits — the abstraction layer per CLAUDE.md SOLID compliance.
 // ============================================================================
 
 /// Bindings used during numeric evaluation. Maps variable names to f64 values.
@@ -485,9 +485,9 @@ pub enum EmitTarget {
     Latex,
     /// MathML.
     MathMl,
-    /// GLSL â€” the engine renderer's target language.
+    /// GLSL — the engine renderer's target language.
     Glsl,
-    /// HLSL â€” the alternate D3D shader target.
+    /// HLSL — the alternate D3D shader target.
     Hlsl,
     /// Reverse-Polish notation, the format the EML evaluator expects.
     EmlRpn,
@@ -692,7 +692,7 @@ impl Simplify for ArithmosExpression {
 
 impl Emit for ArithmosExpression {
     fn emit(&self, _target: EmitTarget) -> Result<String, String> {
-        unimplemented!("ArithmosExpression::emit â€” populated in Wave 3")
+        unimplemented!("ArithmosExpression::emit — populated in Wave 3")
     }
 }
 
@@ -725,7 +725,7 @@ mod tests {
         let expr = ArithmosExpression::var("x");
         let cfg = SimplificationConfig::default();
         let out = expr.simplify(&cfg);
-        // Default simplify is a no-op â€” equal-shape result.
+        // Default simplify is a no-op — equal-shape result.
         assert!(matches!(out, ArithmosExpression::Variable(_)));
     }
 }

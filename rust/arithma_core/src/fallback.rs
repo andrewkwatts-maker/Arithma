@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/fallback.rs ======//
+//====== Arithma/rust/arithma_core/src/fallback.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -18,9 +18,9 @@
 //!
 //! The trait + stats migrated from pt-arithmos
 //! `pt_fallback_system.rs::PTFallbackFunction` and
-//! `PTFallbackStats` (Wave 3 follow-up, plan Â§F.8 step 2). The
+//! `PTFallbackStats` (Wave 3 follow-up, plan §F.8 step 2). The
 //! `PTFallbackRegistry` orchestrator stays in pt-arithmos until
-//! `ArithmosExternalFunctionRegistry` can host it directly â€” its concrete
+//! `ArithmosExternalFunctionRegistry` can host it directly — its concrete
 //! shape depends on the engine's symbol-resolver chain that pt-arithmos
 //! still owns.
 
@@ -68,7 +68,7 @@ pub trait ArithmosFallbackFunction<Expr> {
     /// Stable function identifier (e.g. `"sin"`, `"erf"`, `"my_lib::foo"`).
     fn function_id(&self) -> &str;
 
-    /// Pure-Rust implementation. Always available â€” this is the floor of
+    /// Pure-Rust implementation. Always available — this is the floor of
     /// the fallback chain.
     fn rust_implementation(&self, args: &[Expr]) -> Result<Expr, String>;
 
@@ -78,7 +78,7 @@ pub trait ArithmosFallbackFunction<Expr> {
     fn external_function_name(&self) -> Option<&str> { None }
 
     /// Whether this function should prefer external implementation
-    /// when both paths are available. Defaults to `true` â€” external
+    /// when both paths are available. Defaults to `true` — external
     /// libraries usually win on speed for ops they specialise in.
     fn prefer_external(&self) -> bool { true }
 }
@@ -214,9 +214,9 @@ mod tests {
         assert_eq!(s, ArithmosFallbackStats::default());
     }
 
-    // â”€â”€â”€ trait â€” stub impl â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€â”€ trait — stub impl â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    /// Pretend "sin" function â€” sums all f64 args (intentionally trivial)
+    /// Pretend "sin" function — sums all f64 args (intentionally trivial)
     /// to exercise the trait surface.
     struct StubSin;
     impl ArithmosFallbackFunction<f64> for StubSin {

@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/probabilities/mod.rs ======//
+//====== Arithma/rust/arithma_core/src/probabilities/mod.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -11,18 +11,18 @@
 //!
 //! Probability distributions, quantile functions, statistical moments and
 //! samplers. Mirrors `pt_arithmos::math::probabilities`. The core abstraction
-//! is the [`ArithmosDistribution`] trait â€” every concrete distribution
-//! (Normal, Binomial, Bernoulli, â€¦) implements it so downstream code can be
+//! is the [`ArithmosDistribution`] trait — every concrete distribution
+//! (Normal, Binomial, Bernoulli, …) implements it so downstream code can be
 //! generic over the kind.
 //!
 //! ## Submodules
 //!
-//! - [`bernoulli`], [`binomial`], [`normal`] â€” concrete distributions.
-//! - [`distribution_factory`] â€” JSON-driven distribution constructor.
-//! - [`quantile_function`] â€” inverse-CDF helpers.
-//! - [`confidence_interval`] â€” interval estimation.
-//! - [`statistical_moment`] â€” variance / skew / kurtosis.
-//! - [`statistical_sampler`] â€” generic sampling driver.
+//! - [`bernoulli`], [`binomial`], [`normal`] — concrete distributions.
+//! - [`distribution_factory`] — JSON-driven distribution constructor.
+//! - [`quantile_function`] — inverse-CDF helpers.
+//! - [`confidence_interval`] — interval estimation.
+//! - [`statistical_moment`] — variance / skew / kurtosis.
+//! - [`statistical_sampler`] — generic sampling driver.
 
 pub mod bernoulli;
 pub mod binomial;
@@ -44,7 +44,7 @@ pub use statistical_sampler::ArithmosStatisticalSampler;
 
 /// The common contract every distribution must implement.
 ///
-/// Methods are intentionally `f64`-typed â€” distributions own the numeric
+/// Methods are intentionally `f64`-typed — distributions own the numeric
 /// approximation; the caller is expected to maintain symbolic structure at a
 /// higher level via `ArithmosExpression`. Implementations MUST NOT panic;
 /// invalid inputs return `Err`.

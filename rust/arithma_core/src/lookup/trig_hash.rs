@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/lookup/trig_hash.rs ======//
+//====== Arithma/rust/arithma_core/src/lookup/trig_hash.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -13,8 +13,8 @@
 //!
 //! The `angle_ids` block below was migrated from
 //! `pt-arithmos/src/math/pt_trig_hash_lookup.rs::trig_ids` (Wave 3, plan
-//! Â§F.8 step 1). The IDs are the contract â€” same numeric values, same
-//! semantics â€” so the engine and any other downstream consumer can route
+//! §F.8 step 1). The IDs are the contract — same numeric values, same
+//! semantics — so the engine and any other downstream consumer can route
 //! a canonical-angle lookup through either Arithmos (here) or pt-arithmos
 //! (legacy) and get the same answer.
 //!
@@ -24,51 +24,51 @@
 
 /// Compile-time constant IDs for ultra-fast trigonometric evaluation. Each
 /// ID names a canonical angle in the unit circle. The actual `f64` value of
-/// the angle is NOT what's stored â€” these are stable hash slots so multiple
+/// the angle is NOT what's stored — these are stable hash slots so multiple
 /// expressions referring to the same angle (e.g. `pi/4`, `45 deg in rad`,
 /// `cached(0.7853981633974483)`) collapse onto the same lookup key.
 pub mod angle_ids {
     /// Hash slot for the angle `0` (zero radians).
     pub const ZERO: u32 = 1000;
 
-    /// Hash slot for `Ï€/6` (30Â°).
+    /// Hash slot for `π/6` (30°).
     pub const PI_OVER_6: u32 = 1001;
-    /// Hash slot for `Ï€/4` (45Â°).
+    /// Hash slot for `π/4` (45°).
     pub const PI_OVER_4: u32 = 1002;
-    /// Hash slot for `Ï€/3` (60Â°).
+    /// Hash slot for `π/3` (60°).
     pub const PI_OVER_3: u32 = 1003;
-    /// Hash slot for `Ï€/2` (90Â°).
+    /// Hash slot for `π/2` (90°).
     pub const PI_OVER_2: u32 = 1004;
-    /// Hash slot for `2Ï€/3` (120Â°).
+    /// Hash slot for `2π/3` (120°).
     pub const TWO_PI_OVER_3: u32 = 1005;
-    /// Hash slot for `3Ï€/4` (135Â°).
+    /// Hash slot for `3π/4` (135°).
     pub const THREE_PI_OVER_4: u32 = 1006;
-    /// Hash slot for `5Ï€/6` (150Â°).
+    /// Hash slot for `5π/6` (150°).
     pub const FIVE_PI_OVER_6: u32 = 1007;
-    /// Hash slot for `Ï€` (180Â°).
+    /// Hash slot for `π` (180°).
     pub const PI: u32 = 1008;
-    /// Hash slot for `3Ï€/2` (270Â°).
+    /// Hash slot for `3π/2` (270°).
     pub const THREE_PI_OVER_2: u32 = 1009;
-    /// Hash slot for `2Ï€` (360Â°).
+    /// Hash slot for `2π` (360°).
     pub const TWO_PI: u32 = 1010;
 }
 
 /// Returns the human-readable name of an angle ID, or `None` if the ID is
 /// not registered. Useful for debug output and equation-ID texture
-/// inspection (plan Â§C).
+/// inspection (plan §C).
 pub fn angle_name(id: u32) -> Option<&'static str> {
     match id {
         angle_ids::ZERO => Some("0"),
-        angle_ids::PI_OVER_6 => Some("Ï€/6"),
-        angle_ids::PI_OVER_4 => Some("Ï€/4"),
-        angle_ids::PI_OVER_3 => Some("Ï€/3"),
-        angle_ids::PI_OVER_2 => Some("Ï€/2"),
-        angle_ids::TWO_PI_OVER_3 => Some("2Ï€/3"),
-        angle_ids::THREE_PI_OVER_4 => Some("3Ï€/4"),
-        angle_ids::FIVE_PI_OVER_6 => Some("5Ï€/6"),
-        angle_ids::PI => Some("Ï€"),
-        angle_ids::THREE_PI_OVER_2 => Some("3Ï€/2"),
-        angle_ids::TWO_PI => Some("2Ï€"),
+        angle_ids::PI_OVER_6 => Some("π/6"),
+        angle_ids::PI_OVER_4 => Some("π/4"),
+        angle_ids::PI_OVER_3 => Some("π/3"),
+        angle_ids::PI_OVER_2 => Some("π/2"),
+        angle_ids::TWO_PI_OVER_3 => Some("2π/3"),
+        angle_ids::THREE_PI_OVER_4 => Some("3π/4"),
+        angle_ids::FIVE_PI_OVER_6 => Some("5π/6"),
+        angle_ids::PI => Some("π"),
+        angle_ids::THREE_PI_OVER_2 => Some("3π/2"),
+        angle_ids::TWO_PI => Some("2π"),
         _ => None,
     }
 }
@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn ids_match_pt_arithmos_contract() {
-        // The numeric values are the migration contract with pt-arithmos â€”
+        // The numeric values are the migration contract with pt-arithmos —
         // do not change them without updating the legacy lookup tables too.
         assert_eq!(angle_ids::ZERO, 1000);
         assert_eq!(angle_ids::PI_OVER_6, 1001);
@@ -149,8 +149,8 @@ mod tests {
     #[test]
     fn angle_name_round_trips() {
         assert_eq!(angle_name(angle_ids::ZERO), Some("0"));
-        assert_eq!(angle_name(angle_ids::PI), Some("Ï€"));
-        assert_eq!(angle_name(angle_ids::TWO_PI), Some("2Ï€"));
+        assert_eq!(angle_name(angle_ids::PI), Some("π"));
+        assert_eq!(angle_name(angle_ids::TWO_PI), Some("2π"));
         assert_eq!(angle_name(0), None);
         assert_eq!(angle_name(9999), None);
     }

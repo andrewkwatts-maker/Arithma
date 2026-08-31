@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/numerical/root_finding.rs ======//
+//====== Arithma/rust/arithma_core/src/numerical/root_finding.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -50,7 +50,7 @@ pub fn find_root_bisection(
     _hi: f64,
     _config: &ArithmosRootFindingConfig,
 ) -> Result<ArithmosRootFindingResult, String> {
-    unimplemented!("find_root_bisection â€” populated in Wave 3")
+    unimplemented!("find_root_bisection — populated in Wave 3")
 }
 
 /// Newton-Raphson root finder. Wave-2 stub.
@@ -60,7 +60,7 @@ pub fn find_root_newton_raphson(
     _initial: f64,
     _config: &ArithmosRootFindingConfig,
 ) -> Result<ArithmosRootFindingResult, String> {
-    unimplemented!("find_root_newton_raphson â€” populated in Wave 3")
+    unimplemented!("find_root_newton_raphson — populated in Wave 3")
 }
 
 /// Secant-method root finder. Wave-2 stub.
@@ -71,7 +71,7 @@ pub fn find_root_secant(
     _x1: f64,
     _config: &ArithmosRootFindingConfig,
 ) -> Result<ArithmosRootFindingResult, String> {
-    unimplemented!("find_root_secant â€” populated in Wave 3")
+    unimplemented!("find_root_secant — populated in Wave 3")
 }
 
 #[cfg(test)]

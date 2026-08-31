@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/probabilities/normal.rs ======//
+//====== Arithma/rust/arithma_core/src/probabilities/normal.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -37,10 +37,10 @@ impl ArithmosNormal {
 
 impl ArithmosDistribution for ArithmosNormal {
     fn pdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosNormal::pdf â€” populated in Wave 3")
+        unimplemented!("ArithmosNormal::pdf — populated in Wave 3")
     }
     fn cdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosNormal::cdf â€” populated in Wave 3")
+        unimplemented!("ArithmosNormal::cdf — populated in Wave 3")
     }
     fn mean(&self) -> Result<f64, String> {
         Ok(self.mean)

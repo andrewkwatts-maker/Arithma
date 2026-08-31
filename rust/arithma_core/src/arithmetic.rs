@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/arithmetic.rs ======//
+//====== Arithma/rust/arithma_core/src/arithmetic.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -13,8 +13,8 @@
 //!
 //! The [`ArithmosLosslessArithmetic`] trait is migrated from pt-arithmos
 //! `pt_internal_arithmetic.rs::PTLosslessArithmetic` (Wave 3 follow-up,
-//! plan Â§F.8 step 3 "integer/variable"). The trait shape is the
-//! contract â€” pt-arithmos `PTInteger` continues to implement the legacy
+//! plan §F.8 step 3 "integer/variable"). The trait shape is the
+//! contract — pt-arithmos `PTInteger` continues to implement the legacy
 //! trait until `ArithmosInteger` graduates from stub status, at which
 //! point the impl moves here too.
 
@@ -36,7 +36,7 @@ pub fn checked_sub_i64(a: i64, b: i64) -> Option<i64> {
     a.checked_sub(b)
 }
 
-/// Lossless integer division â€” returns `None` for zero divisors and for
+/// Lossless integer division — returns `None` for zero divisors and for
 /// non-exact division (i.e. `a % b != 0`). The "lossless" contract means
 /// any caller getting a `Some(_)` knows the division was exact.
 pub fn checked_div_exact_i64(a: i64, b: i64) -> Option<i64> {
@@ -65,7 +65,7 @@ pub fn can_multiply_i64(a: i64, b: i64) -> bool {
 /// strategy (symbolic, bigint, error) is needed.
 ///
 /// Migrated from pt-arithmos `PTLosslessArithmetic`. The shape is the
-/// migration contract â€” every existing call site continues to work
+/// migration contract — every existing call site continues to work
 /// unchanged once `ArithmosInteger` adopts this trait.
 pub trait ArithmosLosslessArithmetic: Sized {
     /// `true` iff `self + other` can be performed without loss.
@@ -106,7 +106,7 @@ pub trait ArithmosLosslessArithmetic: Sized {
 impl ArithmosLosslessArithmetic for i64 {
     fn can_add_lossless(&self, other: &i64) -> bool { can_add_i64(*self, *other) }
     fn can_subtract_lossless(&self, other: &i64) -> bool {
-        // Override the default â€” subtraction overflow is asymmetric from
+        // Override the default — subtraction overflow is asymmetric from
         // addition for i64 (e.g. `i64::MIN - 1` overflows but
         // `i64::MIN + (-1)` doesn't, and vice-versa).
         checked_sub_i64(*self, *other).is_some()
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn i64_default_can_subtract_falls_through_to_add() {
-        // The default trait impl mirrors can_add â€” confirm via i64.
+        // The default trait impl mirrors can_add — confirm via i64.
         assert!((100_i64).can_subtract_lossless(&50));
         assert!(!(i64::MIN).can_subtract_lossless(&i64::MAX));
     }

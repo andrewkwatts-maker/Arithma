@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/lookup/mod.rs ======//
+//====== Arithma/rust/arithma_core/src/lookup/mod.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -10,8 +10,8 @@
 //! Lookup tables for expensive transcendental functions.
 //!
 //! Two tables are exposed:
-//! - [`trig_hash`] â€” sin/cos/tan with hash-keyed canonical-angle mapping.
-//! - [`math_hash`] â€” exp/ln/sqrt/etc. by hashed argument bucket.
+//! - [`trig_hash`] — sin/cos/tan with hash-keyed canonical-angle mapping.
+//! - [`math_hash`] — exp/ln/sqrt/etc. by hashed argument bucket.
 //!
 //! Wave-2 stub. The real tables migrate from pt-arithmos in Wave 3.
 

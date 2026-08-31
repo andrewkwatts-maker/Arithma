@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/calculus/mod.rs ======//
+//====== Arithma/rust/arithma_core/src/calculus/mod.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -15,10 +15,10 @@
 //!
 //! ## Submodules
 //!
-//! - [`differentiation`] â€” direct differentiation rules (sum, product, chain).
-//! - [`differentiation_iterative`] â€” stack-based version, no recursion (per the
+//! - [`differentiation`] — direct differentiation rules (sum, product, chain).
+//! - [`differentiation_iterative`] — stack-based version, no recursion (per the
 //!   engine's safety-critical standard rule 1).
-//! - [`integration`] â€” symbolic integration (table lookup, integration by parts,
+//! - [`integration`] — symbolic integration (table lookup, integration by parts,
 //!   substitution).
 
 pub mod differentiation;
@@ -37,7 +37,7 @@ mod tests {
     #[test]
     fn calculus_module_exports_resolve() {
         // Compile-time smoke: every re-export is callable. We don't invoke the
-        // stubs (they panic) â€” just take function pointers to prove the paths.
+        // stubs (they panic) — just take function pointers to prove the paths.
         let _: fn(&ArithmosExpression, &str) -> _ = differentiate;
         let _: fn(&ArithmosExpression, &str) -> _ = differentiate_iterative;
         let _: fn(&ArithmosExpression, &str) -> _ = integrate;

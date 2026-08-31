@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/external/sdk.rs ======//
+//====== Arithma/rust/arithma_core/src/external/sdk.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -8,7 +8,7 @@
 //!For inquiries, please contact AndrewKWatts@Gmail.com
 
 //! SDK helpers for authoring external backends.
-//! Wave-2 placeholder â€” populated in Wave 3.
+//! Wave-2 placeholder — populated in Wave 3.
 
 #[cfg(test)]
 mod tests {

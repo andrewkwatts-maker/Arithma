@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/calculus/differentiation_iterative.rs ======//
+//====== Arithma/rust/arithma_core/src/calculus/differentiation_iterative.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized

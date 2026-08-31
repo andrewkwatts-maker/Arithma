@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/probabilities/bernoulli.rs ======//
+//====== Arithma/rust/arithma_core/src/probabilities/bernoulli.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -9,7 +9,7 @@
 
 //! # Bernoulli distribution
 //!
-//! `Bernoulli(p)` â€” single trial success / failure.
+//! `Bernoulli(p)` — single trial success / failure.
 
 use crate::probabilities::ArithmosDistribution;
 
@@ -28,10 +28,10 @@ impl ArithmosBernoulli {
 
 impl ArithmosDistribution for ArithmosBernoulli {
     fn pdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosBernoulli::pdf â€” populated in Wave 3")
+        unimplemented!("ArithmosBernoulli::pdf — populated in Wave 3")
     }
     fn cdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosBernoulli::cdf â€” populated in Wave 3")
+        unimplemented!("ArithmosBernoulli::cdf — populated in Wave 3")
     }
     fn mean(&self) -> Result<f64, String> {
         Ok(self.p)

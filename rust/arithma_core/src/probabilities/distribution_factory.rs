@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/probabilities/distribution_factory.rs ======//
+//====== Arithma/rust/arithma_core/src/probabilities/distribution_factory.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -10,7 +10,7 @@
 //! # Distribution factory
 //!
 //! JSON-driven construction of distributions, used by the engine's data-driven
-//! initialisation pattern (CLAUDE.md Â§6).
+//! initialisation pattern (CLAUDE.md §6).
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -36,7 +36,7 @@ impl ArithmosDistributionFactory {
     /// Construct a distribution from a spec. Returns a trait object so callers
     /// don't have to know the concrete type at compile time.
     pub fn create(_spec: &ArithmosDistributionSpec) -> Arc<dyn ArithmosDistribution + Send + Sync> {
-        unimplemented!("ArithmosDistributionFactory::create â€” populated in Wave 3")
+        unimplemented!("ArithmosDistributionFactory::create — populated in Wave 3")
     }
 
     /// Construct a distribution from a JSON string. Convenience for hot-reload.

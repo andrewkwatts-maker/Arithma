@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/lib.rs ======//
+//====== Arithma/rust/arithma_core/src/lib.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -16,29 +16,29 @@
 //!
 //! ## Module map
 //!
-//! - [`expression`] â€” `ArithmosExpression` AST plus iterative and runtime simplifier
+//! - [`expression`] — `ArithmosExpression` AST plus iterative and runtime simplifier
 //!   passes. The substrate every other module ultimately emits or consumes.
-//! - [`function`] â€” `ArithmosFunction` enum: arithmetic, transcendental, calculus
+//! - [`function`] — `ArithmosFunction` enum: arithmetic, transcendental, calculus
 //!   and statistical operators that appear inside `Expression::Function` nodes.
-//! - [`integer`] â€” `ArithmosInteger` exact unlimited-precision integer.
-//! - [`variable`] â€” `ArithmosVariable` named variable with optional bound value.
-//! - [`constants`] â€” Global constants registry. Loads `default_constants.json` at
+//! - [`integer`] — `ArithmosInteger` exact unlimited-precision integer.
+//! - [`variable`] — `ArithmosVariable` named variable with optional bound value.
+//! - [`constants`] — Global constants registry. Loads `default_constants.json` at
 //!   first access (embedded via `include_str!`).
-//! - [`calculus`] â€” Symbolic and iterative differentiation, integration.
-//! - [`fourier`] â€” Fourier transform configuration and pipeline.
-//! - [`equation_solver`] â€” Solving algebraic equations symbolically and numerically.
-//! - [`geometry`] â€” Vector / line / plane / sphere / intersection types.
-//! - [`probabilities`] â€” Distributions, quantiles, moments, samplers.
-//! - [`numerical`] â€” Root-finding, critical points, interval analysis.
-//! - [`matrix`] / [`tensor`] â€” Linear algebra.
-//! - [`unit`] / [`si_units`] â€” Unit-of-measure system. Loads `si_units.json` at
+//! - [`calculus`] — Symbolic and iterative differentiation, integration.
+//! - [`fourier`] — Fourier transform configuration and pipeline.
+//! - [`equation_solver`] — Solving algebraic equations symbolically and numerically.
+//! - [`geometry`] — Vector / line / plane / sphere / intersection types.
+//! - [`probabilities`] — Distributions, quantiles, moments, samplers.
+//! - [`numerical`] — Root-finding, critical points, interval analysis.
+//! - [`matrix`] / [`tensor`] — Linear algebra.
+//! - [`unit`] / [`si_units`] — Unit-of-measure system. Loads `si_units.json` at
 //!   first access (embedded via `include_str!`).
-//! - [`lookup`] â€” Trig and general math hash-lookup tables.
-//! - [`fallback`] â€” Fallback dispatch system when a primary backend cannot evaluate.
-//! - [`external`] â€” External-function registry (the Arithmos / eml-math / engine
+//! - [`lookup`] — Trig and general math hash-lookup tables.
+//! - [`fallback`] — Fallback dispatch system when a primary backend cannot evaluate.
+//! - [`external`] — External-function registry (the Arithmos / eml-math / engine
 //!   three-way routing entry point) plus C++ and Rust dynamic executors.
-//! - [`arithmetic`] â€” Lossless internal arithmetic helpers.
-//! - [`pyfacade`] â€” PyO3 wrapper structs (gated by the `python` feature).
+//! - [`arithmetic`] — Lossless internal arithmetic helpers.
+//! - [`pyfacade`] — PyO3 wrapper structs (gated by the `python` feature).
 //!
 //! ## Cross-library interop
 //!
@@ -105,8 +105,8 @@ pub fn version() -> &'static str {
 /// (`ArithmosExpression`) over which every library can be inspected, simplified,
 /// differentiated or compared.
 ///
-/// The trait is intentionally narrow â€” only conversion methods plus an associated
-/// error type â€” so libraries can implement it without taking on the rest of
+/// The trait is intentionally narrow — only conversion methods plus an associated
+/// error type — so libraries can implement it without taking on the rest of
 /// Arithmos's surface as a hard dependency.
 pub trait ArithmosInterop {
     /// Error type returned by a failed conversion. Libraries are free to use

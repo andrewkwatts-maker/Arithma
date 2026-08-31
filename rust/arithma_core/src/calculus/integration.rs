@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/calculus/integration.rs ======//
+//====== Arithma/rust/arithma_core/src/calculus/integration.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -16,7 +16,7 @@ use crate::expression::ArithmosExpression;
 
 /// Indefinite integral âˆ« expr d{var}. Wave-2 stub.
 pub fn integrate(_expr: &ArithmosExpression, _var: &str) -> Result<ArithmosExpression, String> {
-    unimplemented!("integrate â€” populated in Wave 3")
+    unimplemented!("integrate — populated in Wave 3")
 }
 
 /// Definite integral âˆ«_{lo}^{hi} expr d{var}. Wave-2 stub.
@@ -26,7 +26,7 @@ pub fn integrate_definite(
     _lo: &ArithmosExpression,
     _hi: &ArithmosExpression,
 ) -> Result<ArithmosExpression, String> {
-    unimplemented!("integrate_definite â€” populated in Wave 3")
+    unimplemented!("integrate_definite — populated in Wave 3")
 }
 
 /// Numeric quadrature fall-back when symbolic integration cannot close the
@@ -37,7 +37,7 @@ pub fn integrate_numeric(
     _lo: f64,
     _hi: f64,
 ) -> Result<f64, String> {
-    unimplemented!("integrate_numeric â€” populated in Wave 3")
+    unimplemented!("integrate_numeric — populated in Wave 3")
 }
 
 #[cfg(test)]

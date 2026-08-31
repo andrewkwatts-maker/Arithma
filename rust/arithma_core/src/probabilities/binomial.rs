@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/probabilities/binomial.rs ======//
+//====== Arithma/rust/arithma_core/src/probabilities/binomial.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -9,7 +9,7 @@
 
 //! # Binomial distribution
 //!
-//! `Binomial(n, p)` â€” number of successes in `n` independent trials each with
+//! `Binomial(n, p)` — number of successes in `n` independent trials each with
 //! success probability `p`.
 
 use crate::probabilities::ArithmosDistribution;
@@ -30,10 +30,10 @@ impl ArithmosBinomial {
 
 impl ArithmosDistribution for ArithmosBinomial {
     fn pdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosBinomial::pdf â€” populated in Wave 3")
+        unimplemented!("ArithmosBinomial::pdf — populated in Wave 3")
     }
     fn cdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosBinomial::cdf â€” populated in Wave 3")
+        unimplemented!("ArithmosBinomial::cdf — populated in Wave 3")
     }
     fn mean(&self) -> Result<f64, String> {
         Ok((self.n as f64) * self.p)

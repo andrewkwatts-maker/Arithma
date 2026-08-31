@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/geometry/mod.rs ======//
+//====== Arithma/rust/arithma_core/src/geometry/mod.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -15,11 +15,11 @@
 //!
 //! ## Submodules
 //!
-//! - [`vector`] â€” `ArithmosVector` 3-vector.
-//! - [`line`] â€” `ArithmosLine` parametric line.
-//! - [`plane`] â€” `ArithmosPlane` infinite plane.
-//! - [`sphere`] â€” `ArithmosSphere` sphere.
-//! - [`intersection`] â€” closed-form intersection routines.
+//! - [`vector`] — `ArithmosVector` 3-vector.
+//! - [`line`] — `ArithmosLine` parametric line.
+//! - [`plane`] — `ArithmosPlane` infinite plane.
+//! - [`sphere`] — `ArithmosSphere` sphere.
+//! - [`intersection`] — closed-form intersection routines.
 
 pub mod intersection;
 pub mod line;

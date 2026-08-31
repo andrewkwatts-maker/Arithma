@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/numerical/mod.rs ======//
+//====== Arithma/rust/arithma_core/src/numerical/mod.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -14,11 +14,11 @@
 //!
 //! ## Submodules
 //!
-//! - [`methods`] â€” the generic `solve_with_method` dispatcher and the
+//! - [`methods`] — the generic `solve_with_method` dispatcher and the
 //!   underlying iterative solvers.
-//! - [`critical_points`] â€” local maxima/minima/saddles.
-//! - [`interval_analysis`] â€” interval arithmetic for guaranteed bounds.
-//! - [`root_finding`] â€” bisection / Newton-Raphson / secant.
+//! - [`critical_points`] — local maxima/minima/saddles.
+//! - [`interval_analysis`] — interval arithmetic for guaranteed bounds.
+//! - [`root_finding`] — bisection / Newton-Raphson / secant.
 
 pub mod critical_points;
 pub mod interval_analysis;

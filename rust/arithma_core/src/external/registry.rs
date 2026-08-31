@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/external/registry.rs ======//
+//====== Arithma/rust/arithma_core/src/external/registry.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -40,7 +40,7 @@ pub enum ArithmosExternalFunctionError {
 /// Implemented by every external math backend (pt-arithmos engine glue,
 /// EML-Math, future C++/Python executors).
 ///
-/// Per CLAUDE.md Â§10: this is the *single* registration point â€” never invent a
+/// Per CLAUDE.md §10: this is the *single* registration point — never invent a
 /// parallel symbol table.
 pub trait ArithmosBackend: Send + Sync {
     /// Stable, unique backend identifier. Used by the capability router to
@@ -73,7 +73,7 @@ impl ArithmosExternalFunctionRegistry {
         Self { backends: Vec::new() }
     }
 
-    /// Register a backend. Last-registered wins ties â€” the engine should
+    /// Register a backend. Last-registered wins ties — the engine should
     /// register pt-arithmos engine glue first, then Arithmos core, then EML.
     pub fn register(&mut self, backend: Box<dyn ArithmosBackend>) {
         self.backends.push(backend);

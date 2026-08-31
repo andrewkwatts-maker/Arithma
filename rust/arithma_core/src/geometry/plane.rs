@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/geometry/plane.rs ======//
+//====== Arithma/rust/arithma_core/src/geometry/plane.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -31,7 +31,7 @@ impl ArithmosPlane {
 
     /// Signed distance from `point` to this plane. Wave-2 stub.
     pub fn signed_distance(&self, _point: &ArithmosVector) -> ArithmosExpression {
-        unimplemented!("ArithmosPlane::signed_distance â€” populated in Wave 3")
+        unimplemented!("ArithmosPlane::signed_distance — populated in Wave 3")
     }
 }
 

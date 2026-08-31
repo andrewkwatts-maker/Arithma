@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/function.rs ======//
+//====== Arithma/rust/arithma_core/src/function.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -9,30 +9,30 @@
 
 //! # Function
 //!
-//! `ArithmosFunction` â€” the operator catalogue carried inside
+//! `ArithmosFunction` — the operator catalogue carried inside
 //! `ArithmosExpression::Function(op, args)`. Variants mirror `PTFunction` so the
 //! Wave-3 migration is mechanical.
 //!
 //! Variants are grouped:
 //!
-//! - **Basic arithmetic** â€” Add, Subtract, Multiply, Divide, Power, Negate.
-//! - **Trigonometric** â€” Sin, Cos, Tan, Cot, Sec, Csc.
-//! - **Inverse trigonometric** â€” Asin, Acos, Atan, Atan2.
-//! - **Hyperbolic** â€” Sinh, Cosh, Tanh, Asinh, Acosh, Atanh.
-//! - **Exponential / logarithmic** â€” Exp, Ln, Log, Log10, Log2, LogBase, Pow.
-//! - **Roots** â€” Sqrt, Cbrt, Root.
-//! - **Special functions** â€” Gamma, Beta, Erf, Factorial.
-//! - **Rounding** â€” Abs, Sign, Floor, Ceil, Round.
-//! - **Complex** â€” Real, Imag, Conjugate, Arg.
-//! - **Calculus operators** â€” Derivative, PartialDerivative, Integral,
+//! - **Basic arithmetic** — Add, Subtract, Multiply, Divide, Power, Negate.
+//! - **Trigonometric** — Sin, Cos, Tan, Cot, Sec, Csc.
+//! - **Inverse trigonometric** — Asin, Acos, Atan, Atan2.
+//! - **Hyperbolic** — Sinh, Cosh, Tanh, Asinh, Acosh, Atanh.
+//! - **Exponential / logarithmic** — Exp, Ln, Log, Log10, Log2, LogBase, Pow.
+//! - **Roots** — Sqrt, Cbrt, Root.
+//! - **Special functions** — Gamma, Beta, Erf, Factorial.
+//! - **Rounding** — Abs, Sign, Floor, Ceil, Round.
+//! - **Complex** — Real, Imag, Conjugate, Arg.
+//! - **Calculus operators** — Derivative, PartialDerivative, Integral,
 //!   DefiniteIntegral, plus vector-calculus Laplacian/Gradient/Divergence/Curl.
-//! - **Numerical methods** â€” FindRoots, NewtonRaphson, FindCriticalPoints,
+//! - **Numerical methods** — FindRoots, NewtonRaphson, FindCriticalPoints,
 //!   Optimize.
-//! - **Limit / series** â€” Limit, Summation, Product.
-//! - **Statistical** â€” Median/Mode/Mean/Sum/Variance/StandardDeviation/Min/Max/
+//! - **Limit / series** — Limit, Summation, Product.
+//! - **Statistical** — Median/Mode/Mean/Sum/Variance/StandardDeviation/Min/Max/
 //!   Range/Quartiles/InterquartileRange/Percentile/Z-score/CorrelationCoefficient/
 //!   LinearRegression.
-//! - **Geometry** â€” Area, Volume, Perimeter, SurfaceArea.
+//! - **Geometry** — Area, Volume, Perimeter, SurfaceArea.
 
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +57,7 @@ pub enum ArithmosLimitDirection {
 /// transitively contain `f64` fields and cannot satisfy `Eq`/`Hash` without
 /// a hand-rolled impl that defines a canonical comparison for floats. That
 /// impl will land alongside the equation-ID hashing work in pt-phantasia
-/// (see plan Â§C "Equation-ID texture mechanism"). For now, comparing two
+/// (see plan §C "Equation-ID texture mechanism"). For now, comparing two
 /// `ArithmosFunction`s structurally is the consumer's responsibility.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ArithmosFunction {
@@ -241,7 +241,7 @@ impl ArithmosFunction {
             // Vector calculus depends on `vars.len()`
             Self::DivergenceOperator { vars } | Self::CurlOperator { vars } => vars.len(),
 
-            // Default unary for everything else (calculus, transcendentals, â€¦)
+            // Default unary for everything else (calculus, transcendentals, …)
             _ => 1,
         }
     }

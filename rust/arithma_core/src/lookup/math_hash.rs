@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/lookup/math_hash.rs ======//
+//====== Arithma/rust/arithma_core/src/lookup/math_hash.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -20,14 +20,14 @@
 //! In the original source all IDs lived in a single flat namespace, which
 //! produced numeric collisions across categories (e.g. `LN_E = 5000` and
 //! `LIMIT_SIN_X_OVER_X = 5000`). The collisions are inert because callers
-//! match on the constant name, not the integer â€” but we split into
+//! match on the constant name, not the integer — but we split into
 //! per-category sub-modules so a future hash-into-map use site doesn't
 //! accidentally lose one. The integer values themselves are preserved
-//! verbatim so the equation-ID texture (plan Â§C) keeps writer/reader
+//! verbatim so the equation-ID texture (plan §C) keeps writer/reader
 //! agreement.
 //!
 //! The fast-path simplifier functions (`fast_algebra::*`, `fast_integrals::*`,
-//! â€¦) that returned `PTExpression` results stay in pt-arithmos for now;
+//! …) that returned `PTExpression` results stay in pt-arithmos for now;
 //! they migrate here once `ArithmosExpression` graduates from stub.
 
 // â”€â”€â”€ Algebraic simplifications (2000-series) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -100,7 +100,7 @@ pub mod sum_ids {
     pub const SUM_INFINITE_GEOMETRIC: u32 = 6004; // Î£[k=0..âˆž] ar^k = a/(1-r) when |r|<1
     pub const SUM_POWERS_OF_TWO: u32 = 6005;      // Î£[k=0..n] 2^k = 2^(n+1) - 1
     pub const SUM_HARMONIC: u32 = 6006;           // Î£[k=1..n] 1/k â‰ˆ ln(n) + Î³
-    pub const SUM_RECIPROCAL_SQUARES: u32 = 6007; // Î£[k=1..âˆž] 1/kÂ² = Ï€Â²/6 (Basel)
+    pub const SUM_RECIPROCAL_SQUARES: u32 = 6007; // Î£[k=1..âˆž] 1/kÂ² = πÂ²/6 (Basel)
 }
 
 // â”€â”€â”€ Logarithmic simplifications (collides with limit_ids in legacy) â”€â”€â”€â”€â”€â”€â”€
@@ -153,7 +153,7 @@ pub enum MathIdKind {
 /// Derive a category tag from a sub-module's range. Algebraic / integral /
 /// derivative / sqrt are unique by range; the 5000/6000 series are
 /// ambiguous (Limit vs Logarithm; Sum vs Exponential) and require an
-/// out-of-band hint â€” here we default to the *first* category that owns the
+/// out-of-band hint — here we default to the *first* category that owns the
 /// range. Callers that need the disambiguation should use the `*_ids`
 /// constants directly rather than this function.
 pub fn classify(id: u32) -> Option<MathIdKind> {
@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn id_ranges_match_pt_arithmos_contract() {
-        // Numeric values are the migration contract â€” do not change without
+        // Numeric values are the migration contract — do not change without
         // updating pt-arithmos' lookup table in lock-step.
         assert_eq!(algebraic_ids::ZERO_PLUS_X, 2000);
         assert_eq!(integral_ids::INTEGRAL_X, 3000);

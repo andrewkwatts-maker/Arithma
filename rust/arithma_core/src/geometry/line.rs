@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/geometry/line.rs ======//
+//====== Arithma/rust/arithma_core/src/geometry/line.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -19,7 +19,7 @@ use crate::geometry::vector::ArithmosVector;
 pub struct ArithmosLine {
     /// Origin point.
     pub origin: ArithmosVector,
-    /// Direction vector. Need not be unit-length â€” the parametric form handles
+    /// Direction vector. Need not be unit-length — the parametric form handles
     /// scaling.
     pub direction: ArithmosVector,
 }
@@ -32,7 +32,7 @@ impl ArithmosLine {
 
     /// Evaluate the line at parameter `t`. Wave-2 stub.
     pub fn at(&self, _t: ArithmosExpression) -> ArithmosVector {
-        unimplemented!("ArithmosLine::at â€” populated in Wave 3")
+        unimplemented!("ArithmosLine::at — populated in Wave 3")
     }
 }
 

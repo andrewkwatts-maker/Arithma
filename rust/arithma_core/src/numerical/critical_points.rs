@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/numerical/critical_points.rs ======//
+//====== Arithma/rust/arithma_core/src/numerical/critical_points.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -12,12 +12,12 @@
 //! Local maxima, minima, saddle points and inflection points found via the
 //! first- and second-derivative tests. The analysis pipeline:
 //!
-//! 1. `find_stationary_points` â€” solve `f'(x) = 0` over `[lo, hi]`
-//! 2. `analyze_point`         â€” classify each root via `f''` and `f'''`
-//! 3. `find_extrema`          â€” split classified stationary points into
+//! 1. `find_stationary_points` — solve `f'(x) = 0` over `[lo, hi]`
+//! 2. `analyze_point`         — classify each root via `f''` and `f'''`
+//! 3. `find_extrema`          — split classified stationary points into
 //!                              maxima and minima
-//! 4. `find_inflection_points`â€” solve `f''(x) = 0` and verify `f'''(x) â‰  0`
-//! 5. `analyze_intervals`     â€” combine stationary + inflection + monotonic
+//! 4. `find_inflection_points`— solve `f''(x) = 0` and verify `f'''(x) â‰  0`
+//! 5. `analyze_intervals`     — combine stationary + inflection + monotonic
 //!                              + concavity into a single `ArithmosFunctionAnalysis`
 //!
 //! Wave 2 establishes the full *type surface* so downstream code can compile
@@ -27,7 +27,7 @@
 
 use crate::expression::ArithmosExpression;
 
-// â”€â”€â”€ Defaults (data-driven thresholds per CLAUDE.md Â§6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Defaults (data-driven thresholds per CLAUDE.md §6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 // These mirror the engine-side `PTCriticalPointsConfig::default()` literals
 // in `pt-arithmos/src/math/numerical/pt_critical_points.rs`. Lifting them to
@@ -53,7 +53,7 @@ pub enum ArithmosCriticalPointKind {
     Saddle,
     /// `f''(x*)=0` and `f'''(x*) â‰  0`. A change of concavity.
     Inflection,
-    /// Tests inconclusive â€” derivatives vanish past the order we evaluated.
+    /// Tests inconclusive — derivatives vanish past the order we evaluated.
     Inconclusive,
 }
 
@@ -71,9 +71,9 @@ pub struct ArithmosCriticalPoint {
     /// Sampled `f'(x)` (approximately zero for stationary points; populated
     /// when the analyser was able to evaluate the derivative).
     pub first_derivative: Option<f64>,
-    /// Sampled `f''(x)` â€” sign drives the second-derivative test.
+    /// Sampled `f''(x)` — sign drives the second-derivative test.
     pub second_derivative: Option<f64>,
-    /// Sampled `f'''(x)` â€” used to confirm inflection points.
+    /// Sampled `f'''(x)` — used to confirm inflection points.
     pub third_derivative: Option<f64>,
 }
 
@@ -197,7 +197,7 @@ impl ArithmosCriticalPoints {
         _var: &str,
         _range: ArithmosSearchRange,
     ) -> Result<Vec<ArithmosCriticalPoint>, String> {
-        unimplemented!("find_stationary_points â€” populated in Wave 3")
+        unimplemented!("find_stationary_points — populated in Wave 3")
     }
 
     /// Solve `f''(x) = 0` over `range` and verify each candidate via `f'''`.
@@ -208,7 +208,7 @@ impl ArithmosCriticalPoints {
         _var: &str,
         _range: ArithmosSearchRange,
     ) -> Result<Vec<ArithmosCriticalPoint>, String> {
-        unimplemented!("find_inflection_points â€” populated in Wave 3")
+        unimplemented!("find_inflection_points — populated in Wave 3")
     }
 
     /// Classify one specific point. Wave-3 stub.
@@ -218,7 +218,7 @@ impl ArithmosCriticalPoints {
         _var: &str,
         _point: f64,
     ) -> Result<ArithmosCriticalPointKind, String> {
-        unimplemented!("classify_point â€” populated in Wave 3")
+        unimplemented!("classify_point — populated in Wave 3")
     }
 
     /// Full analysis for a single point: location, value, derivative samples,
@@ -229,7 +229,7 @@ impl ArithmosCriticalPoints {
         _var: &str,
         _point: f64,
     ) -> Result<ArithmosCriticalPoint, String> {
-        unimplemented!("analyze_point â€” populated in Wave 3")
+        unimplemented!("analyze_point — populated in Wave 3")
     }
 
     /// Split classified stationary points into `(maxima, minima)`. Wave-3 stub.
@@ -239,7 +239,7 @@ impl ArithmosCriticalPoints {
         _var: &str,
         _range: ArithmosSearchRange,
     ) -> Result<(Vec<ArithmosCriticalPoint>, Vec<ArithmosCriticalPoint>), String> {
-        unimplemented!("find_extrema â€” populated in Wave 3")
+        unimplemented!("find_extrema — populated in Wave 3")
     }
 
     /// Combined report across the search range. Wave-3 stub.
@@ -249,7 +249,7 @@ impl ArithmosCriticalPoints {
         _var: &str,
         _range: ArithmosSearchRange,
     ) -> Result<ArithmosFunctionAnalysis, String> {
-        unimplemented!("analyze_intervals â€” populated in Wave 3")
+        unimplemented!("analyze_intervals — populated in Wave 3")
     }
 }
 
@@ -262,7 +262,7 @@ pub fn find_critical_points(
     _lo: f64,
     _hi: f64,
 ) -> Result<Vec<ArithmosCriticalPoint>, String> {
-    unimplemented!("find_critical_points â€” populated in Wave 3")
+    unimplemented!("find_critical_points — populated in Wave 3")
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/equation_solver.rs ======//
+//====== Arithma/rust/arithma_core/src/equation_solver.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -56,7 +56,7 @@ pub fn solve(
     _var: &str,
     _strategy: ArithmosSolverStrategy,
 ) -> Result<Vec<ArithmosSolution>, String> {
-    unimplemented!("solve â€” populated in Wave 3")
+    unimplemented!("solve — populated in Wave 3")
 }
 
 /// Solve `lhs = rhs` for `var`. Convenience that internally rewrites to
@@ -67,7 +67,7 @@ pub fn solve_equation(
     _var: &str,
     _strategy: ArithmosSolverStrategy,
 ) -> Result<Vec<ArithmosSolution>, String> {
-    unimplemented!("solve_equation â€” populated in Wave 3")
+    unimplemented!("solve_equation — populated in Wave 3")
 }
 
 /// Solve a system of equations for the listed variables.
@@ -76,7 +76,7 @@ pub fn solve_system(
     _vars: &[&str],
     _strategy: ArithmosSolverStrategy,
 ) -> Result<Vec<Vec<ArithmosSolution>>, String> {
-    unimplemented!("solve_system â€” populated in Wave 3")
+    unimplemented!("solve_system — populated in Wave 3")
 }
 
 #[cfg(test)]

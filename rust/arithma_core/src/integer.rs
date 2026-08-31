@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/integer.rs ======//
+//====== Arithma/rust/arithma_core/src/integer.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -9,7 +9,7 @@
 
 //! # Integer
 //!
-//! `ArithmosInteger` â€” exact, unlimited-precision integer used in place of f64
+//! `ArithmosInteger` — exact, unlimited-precision integer used in place of f64
 //! and i64 throughout the AST. Mirrors `pt_arithmos::PTInteger` and inherits
 //! its split design:
 //!
@@ -52,7 +52,7 @@ impl Default for ArithmosIntegerConfig {
 /// Unlimited-precision integer with bit flags for special values.
 ///
 /// Bytes are stored little-endian (least-significant byte first). The vector
-/// is never empty â€” `[0]` represents zero and is the canonical empty form.
+/// is never empty — `[0]` represents zero and is the canonical empty form.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ArithmosInternalInteger {
     /// Special-value flags. See [`flag`].

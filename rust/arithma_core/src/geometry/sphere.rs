@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/geometry/sphere.rs ======//
+//====== Arithma/rust/arithma_core/src/geometry/sphere.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized

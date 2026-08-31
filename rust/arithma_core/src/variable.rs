@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/variable.rs ======//
+//====== Arithma/rust/arithma_core/src/variable.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -9,7 +9,7 @@
 
 //! # Variable
 //!
-//! `ArithmosVariable` â€” a named symbol with optional bound value, optional unit,
+//! `ArithmosVariable` — a named symbol with optional bound value, optional unit,
 //! and optional documentation. Variables are resolved through the global
 //! constants registry by [`crate::constants::lookup_symbol`].
 
@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::expression::ArithmosExpression;
 
 /// The runtime value attached to a variable. Either a numeric literal or a
-/// symbolic expression â€” the second form is what enables `x = 2Ï€` style
+/// symbolic expression — the second form is what enables `x = 2π` style
 /// derived variables that retain symbolic structure for further simplification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ArithmosVariableValue {
@@ -27,7 +27,7 @@ pub enum ArithmosVariableValue {
     /// Bound to a symbolic expression. The expression is evaluated lazily
     /// each time the variable is referenced so simplification can flow through.
     Symbolic(Box<ArithmosExpression>),
-    /// Unbound â€” referencing the variable in an evaluator returns
+    /// Unbound — referencing the variable in an evaluator returns
     /// `Err("unbound variable")`.
     Unbound,
 }

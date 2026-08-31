@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/numerical/interval_analysis.rs ======//
+//====== Arithma/rust/arithma_core/src/numerical/interval_analysis.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -66,7 +66,7 @@ pub fn evaluate_interval(
     _var: &str,
     _interval: ArithmosInterval,
 ) -> Result<ArithmosInterval, String> {
-    unimplemented!("evaluate_interval â€” populated in Wave 3")
+    unimplemented!("evaluate_interval — populated in Wave 3")
 }
 
 #[cfg(test)]

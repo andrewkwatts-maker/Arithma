@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/expression/simplify.rs ======//
+//====== Arithma/rust/arithma_core/src/expression/simplify.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -25,7 +25,7 @@ pub enum ArithmosSimplificationMethod {
     Compiletime,
     /// Iterative pattern-matched rewrites.
     Iterative,
-    /// Costed search over candidate rewrites â€” most expensive.
+    /// Costed search over candidate rewrites — most expensive.
     Costed,
 }
 

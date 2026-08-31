@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/probabilities/statistical_moment.rs ======//
+//====== Arithma/rust/arithma_core/src/probabilities/statistical_moment.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -9,7 +9,7 @@
 
 //! # Statistical moment
 //!
-//! Moments of distributions and samples â€” variance, skewness, kurtosis.
+//! Moments of distributions and samples — variance, skewness, kurtosis.
 
 /// Static helper for moment calculations on f64 datasets.
 pub struct ArithmosStatisticalMoment;
@@ -17,22 +17,22 @@ pub struct ArithmosStatisticalMoment;
 impl ArithmosStatisticalMoment {
     /// Sample mean.
     pub fn mean(_data: &[f64]) -> Result<f64, String> {
-        unimplemented!("ArithmosStatisticalMoment::mean â€” populated in Wave 3")
+        unimplemented!("ArithmosStatisticalMoment::mean — populated in Wave 3")
     }
 
     /// Sample variance (Bessel-corrected).
     pub fn variance(_data: &[f64]) -> Result<f64, String> {
-        unimplemented!("ArithmosStatisticalMoment::variance â€” populated in Wave 3")
+        unimplemented!("ArithmosStatisticalMoment::variance — populated in Wave 3")
     }
 
     /// Sample skewness (third standardised moment).
     pub fn skewness(_data: &[f64]) -> Result<f64, String> {
-        unimplemented!("ArithmosStatisticalMoment::skewness â€” populated in Wave 3")
+        unimplemented!("ArithmosStatisticalMoment::skewness — populated in Wave 3")
     }
 
     /// Sample kurtosis (fourth standardised moment, excess form).
     pub fn kurtosis(_data: &[f64]) -> Result<f64, String> {
-        unimplemented!("ArithmosStatisticalMoment::kurtosis â€” populated in Wave 3")
+        unimplemented!("ArithmosStatisticalMoment::kurtosis — populated in Wave 3")
     }
 }
 

@@ -1,4 +1,4 @@
-﻿//====== Arithma/rust/arithma_core/src/geometry/vector.rs ======//
+//====== Arithma/rust/arithma_core/src/geometry/vector.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -9,7 +9,7 @@
 
 //! # Vector
 //!
-//! `ArithmosVector` â€” a 3-vector whose components are `ArithmosExpression`
+//! `ArithmosVector` — a 3-vector whose components are `ArithmosExpression`
 //! values, allowing coordinates to remain symbolic throughout the geometry
 //! pipeline.
 
@@ -41,12 +41,12 @@ impl ArithmosVector {
 
     /// Dot product `self Â· other`. Wave-2 stub.
     pub fn dot(&self, _other: &Self) -> ArithmosExpression {
-        unimplemented!("ArithmosVector::dot â€” populated in Wave 3")
+        unimplemented!("ArithmosVector::dot — populated in Wave 3")
     }
 
     /// Cross product `self Ã— other`. Wave-2 stub.
     pub fn cross(&self, _other: &Self) -> Self {
-        unimplemented!("ArithmosVector::cross â€” populated in Wave 3")
+        unimplemented!("ArithmosVector::cross — populated in Wave 3")
     }
 
     /// Squared magnitude `self Â· self`.

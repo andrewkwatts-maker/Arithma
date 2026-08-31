@@ -47,7 +47,7 @@ Test: `lookup_symbol("π")` ≈ 3.14159…, `ArithmosSIUnits::len() > 0`.
 ~1,055 identifiers across 48 files, including every public type name. Scripted,
 one commit. Keep `pub use` aliases for one release so downstream
 (eml-math, eml-spectral, metaphysica, periodica) does not break. Also fix the
-mojibake (`â€"`, `FaÃ§ade`) in `constants.rs`/`arithmetic.rs` and strip the UTF-8
+mojibake (`â€"`, `Façade`) in `constants.rs`/`arithmetic.rs` and strip the UTF-8
 BOM from `rust/arithma_core/Cargo.toml`.
 
 Do this **before** writing new code, or the new code inherits the old prefix.
