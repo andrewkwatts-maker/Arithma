@@ -53,7 +53,7 @@ pub trait ArithmosDistribution {
     /// (discrete) at `x`.
     fn pdf(&self, x: f64) -> Result<f64, String>;
 
-    /// Cumulative distribution function `P(X â‰¤ x)`.
+    /// Cumulative distribution function `P(X ≤ x)`.
     fn cdf(&self, x: f64) -> Result<f64, String>;
 
     /// Mean / expected value.
@@ -74,4 +74,3 @@ mod tests {
         let _: Option<ArithmosNormal> = None;
     }
 }
-

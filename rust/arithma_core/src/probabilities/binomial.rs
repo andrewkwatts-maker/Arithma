@@ -53,4 +53,3 @@ mod tests {
         assert!((b.mean().unwrap() - 5.0).abs() < 1e-12);
     }
 }
-

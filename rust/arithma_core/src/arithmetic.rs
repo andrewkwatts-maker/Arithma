@@ -18,7 +18,7 @@
 //! trait until `ArithmosInteger` graduates from stub status, at which
 //! point the impl moves here too.
 
-// â”€â”€â”€ Free-function helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Free-function helpers ─────────────────────────────────────────────────
 
 /// Lossless multiplication that detects overflow.
 /// Returns `None` if the result wraps.
@@ -40,8 +40,12 @@ pub fn checked_sub_i64(a: i64, b: i64) -> Option<i64> {
 /// non-exact division (i.e. `a % b != 0`). The "lossless" contract means
 /// any caller getting a `Some(_)` knows the division was exact.
 pub fn checked_div_exact_i64(a: i64, b: i64) -> Option<i64> {
-    if b == 0 { return None; }
-    if a % b != 0 { return None; }
+    if b == 0 {
+        return None;
+    }
+    if a % b != 0 {
+        return None;
+    }
     a.checked_div(b)
 }
 
@@ -55,7 +59,7 @@ pub fn can_multiply_i64(a: i64, b: i64) -> bool {
     checked_mul_i64(a, b).is_some()
 }
 
-// â”€â”€â”€ Trait contract â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Trait contract ────────────────────────────────────────────────────────
 
 /// Trait for lossless arithmetic operations on number-like types.
 ///
@@ -101,31 +105,43 @@ pub trait ArithmosLosslessArithmetic: Sized {
     fn divide_lossless(&self, other: &Self) -> Option<Self>;
 }
 
-// â”€â”€â”€ Blanket impl for i64 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Blanket impl for i64 ──────────────────────────────────────────────────
 
 impl ArithmosLosslessArithmetic for i64 {
-    fn can_add_lossless(&self, other: &i64) -> bool { can_add_i64(*self, *other) }
+    fn can_add_lossless(&self, other: &i64) -> bool {
+        can_add_i64(*self, *other)
+    }
     fn can_subtract_lossless(&self, other: &i64) -> bool {
         // Override the default — subtraction overflow is asymmetric from
         // addition for i64 (e.g. `i64::MIN - 1` overflows but
         // `i64::MIN + (-1)` doesn't, and vice-versa).
         checked_sub_i64(*self, *other).is_some()
     }
-    fn can_multiply_lossless(&self, other: &i64) -> bool { can_multiply_i64(*self, *other) }
+    fn can_multiply_lossless(&self, other: &i64) -> bool {
+        can_multiply_i64(*self, *other)
+    }
     fn can_divide_lossless(&self, other: &i64) -> bool {
         *other != 0 && self % other == 0
     }
-    fn add_lossless(&self, other: &i64) -> Option<i64> { checked_add_i64(*self, *other) }
-    fn subtract_lossless(&self, other: &i64) -> Option<i64> { checked_sub_i64(*self, *other) }
-    fn multiply_lossless(&self, other: &i64) -> Option<i64> { checked_mul_i64(*self, *other) }
-    fn divide_lossless(&self, other: &i64) -> Option<i64> { checked_div_exact_i64(*self, *other) }
+    fn add_lossless(&self, other: &i64) -> Option<i64> {
+        checked_add_i64(*self, *other)
+    }
+    fn subtract_lossless(&self, other: &i64) -> Option<i64> {
+        checked_sub_i64(*self, *other)
+    }
+    fn multiply_lossless(&self, other: &i64) -> Option<i64> {
+        checked_mul_i64(*self, *other)
+    }
+    fn divide_lossless(&self, other: &i64) -> Option<i64> {
+        checked_div_exact_i64(*self, *other)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // â”€â”€â”€ Free-function helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Free-function helpers ────────────────────────────────────────────
 
     #[test]
     fn checked_mul_overflow_returns_none() {
@@ -164,7 +180,7 @@ mod tests {
         assert_eq!(checked_div_exact_i64(-12, 4), Some(-3));
     }
 
-    // â”€â”€â”€ Trait blanket impl for i64 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Trait blanket impl for i64 ───────────────────────────────────────
 
     #[test]
     fn i64_can_add_lossless_detects_overflow() {
@@ -206,4 +222,3 @@ mod tests {
         assert!(!(i64::MIN).can_subtract_lossless(&i64::MAX));
     }
 }
-

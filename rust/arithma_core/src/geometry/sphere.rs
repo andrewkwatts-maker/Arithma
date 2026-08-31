@@ -43,4 +43,3 @@ mod tests {
         let _ = s.centre;
     }
 }
-

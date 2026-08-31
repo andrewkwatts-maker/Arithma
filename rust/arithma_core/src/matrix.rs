@@ -24,7 +24,11 @@ impl ArithmosMatrix {
     /// Construct a matrix from a flat row-major cell list. Panics if the
     /// length does not match `rows * cols`.
     pub fn new(rows: usize, cols: usize, cells: Vec<ArithmosExpression>) -> Self {
-        assert_eq!(cells.len(), rows * cols, "cell count must equal rows * cols");
+        assert_eq!(
+            cells.len(),
+            rows * cols,
+            "cell count must equal rows * cols"
+        );
         Self { rows, cols, cells }
     }
 
@@ -55,4 +59,3 @@ mod tests {
         let _ = ArithmosMatrix::new(2, 2, vec![]);
     }
 }
-

@@ -15,10 +15,10 @@
 //! 1. `find_stationary_points` — solve `f'(x) = 0` over `[lo, hi]`
 //! 2. `analyze_point`         — classify each root via `f''` and `f'''`
 //! 3. `find_extrema`          — split classified stationary points into
-//!                              maxima and minima
-//! 4. `find_inflection_points`— solve `f''(x) = 0` and verify `f'''(x) â‰  0`
+//!    maxima and minima
+//! 4. `find_inflection_points`— solve `f''(x) = 0` and verify `f'''(x) ≠ 0`
 //! 5. `analyze_intervals`     — combine stationary + inflection + monotonic
-//!                              + concavity into a single `ArithmosFunctionAnalysis`
+//!    + concavity into a single `ArithmosFunctionAnalysis`
 //!
 //! Wave 2 establishes the full *type surface* so downstream code can compile
 //! against the Arithmos API today. Wave 3 wires the bodies once the supporting
@@ -27,7 +27,7 @@
 
 use crate::expression::ArithmosExpression;
 
-// â”€â”€â”€ Defaults (data-driven thresholds per CLAUDE.md §6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Defaults (data-driven thresholds per CLAUDE.md §6) ──────────────────
 //
 // These mirror the engine-side `PTCriticalPointsConfig::default()` literals
 // in `pt-arithmos/src/math/numerical/pt_critical_points.rs`. Lifting them to
@@ -51,7 +51,7 @@ pub enum ArithmosCriticalPointKind {
     /// `f'(x*)=0` and the function changes from increasing to decreasing or
     /// vice-versa without producing a local extremum.
     Saddle,
-    /// `f''(x*)=0` and `f'''(x*) â‰  0`. A change of concavity.
+    /// `f''(x*)=0` and `f'''(x*) ≠ 0`. A change of concavity.
     Inflection,
     /// Tests inconclusive — derivatives vanish past the order we evaluated.
     Inconclusive,
@@ -125,11 +125,9 @@ impl ArithmosSearchRange {
         self.hi - self.lo
     }
 
-    /// True iff the range is well-formed (non-empty, non-NaN, finite-or-Â±âˆž).
+    /// True iff the range is well-formed (non-empty, non-NaN, finite-or-±∞).
     pub fn is_valid(&self) -> bool {
-        self.lo.is_nan() == false
-            && self.hi.is_nan() == false
-            && self.lo <= self.hi
+        !self.lo.is_nan() && !self.hi.is_nan() && self.lo <= self.hi
     }
 }
 
@@ -288,10 +286,22 @@ mod tests {
     #[test]
     fn default_config_uses_named_constants() {
         let cfg = ArithmosCriticalPointsConfig::default();
-        assert_eq!(cfg.convergence_threshold, ARITHMOS_DEFAULT_CONVERGENCE_THRESHOLD);
-        assert_eq!(cfg.second_derivative_threshold, ARITHMOS_DEFAULT_SECOND_DERIVATIVE_THRESHOLD);
-        assert_eq!(cfg.numerical_tolerance, ARITHMOS_DEFAULT_NUMERICAL_TOLERANCE);
-        assert_eq!(cfg.max_search_iterations, ARITHMOS_DEFAULT_MAX_SEARCH_ITERATIONS);
+        assert_eq!(
+            cfg.convergence_threshold,
+            ARITHMOS_DEFAULT_CONVERGENCE_THRESHOLD
+        );
+        assert_eq!(
+            cfg.second_derivative_threshold,
+            ARITHMOS_DEFAULT_SECOND_DERIVATIVE_THRESHOLD
+        );
+        assert_eq!(
+            cfg.numerical_tolerance,
+            ARITHMOS_DEFAULT_NUMERICAL_TOLERANCE
+        );
+        assert_eq!(
+            cfg.max_search_iterations,
+            ARITHMOS_DEFAULT_MAX_SEARCH_ITERATIONS
+        );
     }
 
     #[test]
@@ -338,8 +348,16 @@ mod tests {
 
     #[test]
     fn monotonic_and_concavity_intervals_round_trip() {
-        let m = ArithmosMonotonicInterval { lo: 0.0, hi: 1.0, increasing: true };
-        let c = ArithmosConcavityInterval { lo: 0.0, hi: 1.0, concave_up: false };
+        let m = ArithmosMonotonicInterval {
+            lo: 0.0,
+            hi: 1.0,
+            increasing: true,
+        };
+        let c = ArithmosConcavityInterval {
+            lo: 0.0,
+            hi: 1.0,
+            concave_up: false,
+        };
         assert!(m.increasing);
         assert!(!c.concave_up);
     }
@@ -385,4 +403,3 @@ mod tests {
         );
     }
 }
-

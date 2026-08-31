@@ -30,7 +30,11 @@ pub enum ArithmosExternalFunctionError {
 
     /// Argument count mismatch.
     #[error("`{op}` expected {expected} args, got {got}")]
-    ArityMismatch { op: String, expected: usize, got: usize },
+    ArityMismatch {
+        op: String,
+        expected: usize,
+        got: usize,
+    },
 
     /// Free-form runtime failure inside the backend.
     #[error("backend evaluation failed: {0}")]
@@ -70,7 +74,9 @@ pub struct ArithmosExternalFunctionRegistry {
 impl ArithmosExternalFunctionRegistry {
     /// New empty registry. The engine seeds this with the canonical backends.
     pub fn new() -> Self {
-        Self { backends: Vec::new() }
+        Self {
+            backends: Vec::new(),
+        }
     }
 
     /// Register a backend. Last-registered wins ties — the engine should
@@ -97,12 +103,16 @@ mod tests {
 
     struct StubBackend;
     impl ArithmosBackend for StubBackend {
-        fn name(&self) -> &'static str { "stub" }
+        fn name(&self) -> &'static str {
+            "stub"
+        }
         fn try_evaluate(
             &self,
             _expr: &ArithmosExpression,
         ) -> Result<ArithmosExpression, ArithmosExternalFunctionError> {
-            Err(ArithmosExternalFunctionError::BackendUnavailable("stub".into()))
+            Err(ArithmosExternalFunctionError::BackendUnavailable(
+                "stub".into(),
+            ))
         }
     }
 
@@ -120,4 +130,3 @@ mod tests {
         assert_eq!(r.backends()[0].name(), "stub");
     }
 }
-

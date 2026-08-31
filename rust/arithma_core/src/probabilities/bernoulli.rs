@@ -51,4 +51,3 @@ mod tests {
         assert!((b.variance().unwrap() - 0.25).abs() < 1e-12);
     }
 }
-

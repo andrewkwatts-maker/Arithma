@@ -14,13 +14,12 @@
 //! registering themselves as backends here. Downstream plugins (pt-eml-bridge)
 //! call into the registry rather than dispatching directly.
 
+pub mod config;
 pub mod registry;
 pub mod sdk;
-pub mod config;
 
 #[cfg(feature = "cpp-support")]
 pub mod cpp_executor;
 
 #[cfg(feature = "rust-support")]
 pub mod rust_executor;
-

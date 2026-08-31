@@ -41,12 +41,18 @@ impl ArithmosRustExecutor {
     /// [`ArithmosExternalFunctionError::BackendUnavailable`], which the router
     /// reads as "fall through to the next backend".
     pub fn new(name: &'static str) -> Self {
-        Self { name, handler: None }
+        Self {
+            name,
+            handler: None,
+        }
     }
 
     /// Bind an evaluation handler.
     pub fn with_handler(name: &'static str, handler: ArithmosRustHandler) -> Self {
-        Self { name, handler: Some(handler) }
+        Self {
+            name,
+            handler: Some(handler),
+        }
     }
 
     /// Whether a handler is bound.
@@ -106,7 +112,9 @@ mod tests {
         let exec = ArithmosRustExecutor::with_handler(
             "rust-test",
             Box::new(|_e| {
-                Err(ArithmosExternalFunctionError::EvaluationFailed("boom".into()))
+                Err(ArithmosExternalFunctionError::EvaluationFailed(
+                    "boom".into(),
+                ))
             }),
         );
         match exec.try_evaluate(&ArithmosExpression::var("x")) {

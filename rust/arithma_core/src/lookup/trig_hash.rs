@@ -187,13 +187,20 @@ mod tests {
 
     #[test]
     fn lookup_sin_pythagorean_identity() {
-        // sinÂ² + cosÂ² = 1 for every canonical angle.
+        // sin² + cos² = 1 for every canonical angle.
         let eps = 1e-12;
         for id in [
-            angle_ids::ZERO, angle_ids::PI_OVER_6, angle_ids::PI_OVER_4,
-            angle_ids::PI_OVER_3, angle_ids::PI_OVER_2, angle_ids::TWO_PI_OVER_3,
-            angle_ids::THREE_PI_OVER_4, angle_ids::FIVE_PI_OVER_6, angle_ids::PI,
-            angle_ids::THREE_PI_OVER_2, angle_ids::TWO_PI,
+            angle_ids::ZERO,
+            angle_ids::PI_OVER_6,
+            angle_ids::PI_OVER_4,
+            angle_ids::PI_OVER_3,
+            angle_ids::PI_OVER_2,
+            angle_ids::TWO_PI_OVER_3,
+            angle_ids::THREE_PI_OVER_4,
+            angle_ids::FIVE_PI_OVER_6,
+            angle_ids::PI,
+            angle_ids::THREE_PI_OVER_2,
+            angle_ids::TWO_PI,
         ] {
             let s = lookup_sin(id).unwrap();
             let c = lookup_cos(id).unwrap();
@@ -201,4 +208,3 @@ mod tests {
         }
     }
 }
-

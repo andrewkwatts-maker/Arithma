@@ -9,12 +9,12 @@
 
 //! # Plane
 //!
-//! Infinite plane defined by a normal vector and a scalar offset (`n Â· p = d`).
+//! Infinite plane defined by a normal vector and a scalar offset (`n · p = d`).
 
 use crate::expression::ArithmosExpression;
 use crate::geometry::vector::ArithmosVector;
 
-/// Plane in normal-and-offset form: `normal Â· p = offset`.
+/// Plane in normal-and-offset form: `normal · p = offset`.
 #[derive(Debug, Clone)]
 pub struct ArithmosPlane {
     /// Plane normal (need not be unit-length).
@@ -45,4 +45,3 @@ mod tests {
         let _ = p.normal;
     }
 }
-

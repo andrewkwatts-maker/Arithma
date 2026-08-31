@@ -9,11 +9,11 @@
 
 //! # Normal distribution
 //!
-//! The Gaussian / normal distribution `N(Î¼, ÏƒÂ²)`.
+//! The Gaussian / normal distribution `N(Î¼, Ïƒ²)`.
 
 use crate::probabilities::ArithmosDistribution;
 
-/// Normal distribution `N(mean, std_devÂ²)`.
+/// Normal distribution `N(mean, std_dev²)`.
 #[derive(Debug, Clone, Copy)]
 pub struct ArithmosNormal {
     pub mean: f64,
@@ -29,7 +29,7 @@ impl ArithmosNormal {
         }
     }
 
-    /// `N(mean, std_devÂ²)`.
+    /// `N(mean, std_dev²)`.
     pub fn new(mean: f64, std_dev: f64) -> Self {
         Self { mean, std_dev }
     }
@@ -60,4 +60,3 @@ mod tests {
         assert_eq!(n.variance().unwrap(), 1.0);
     }
 }
-

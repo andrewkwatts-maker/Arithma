@@ -60,4 +60,3 @@ mod tests {
         assert!(matches!(back, ArithmosDistributionSpec::Normal { .. }));
     }
 }
-

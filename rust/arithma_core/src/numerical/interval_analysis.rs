@@ -22,7 +22,7 @@ pub struct ArithmosInterval {
 }
 
 impl ArithmosInterval {
-    /// Construct an interval. `lo` must be â‰¤ `hi`.
+    /// Construct an interval. `lo` must be ≤ `hi`.
     pub fn new(lo: f64, hi: f64) -> Self {
         Self { lo, hi }
     }
@@ -85,4 +85,3 @@ mod tests {
         assert!(i.is_empty());
     }
 }
-

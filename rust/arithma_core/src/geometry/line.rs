@@ -9,7 +9,7 @@
 
 //! # Line
 //!
-//! Parametric line `P(t) = origin + t Â· direction`. Both vectors are symbolic.
+//! Parametric line `P(t) = origin + t · direction`. Both vectors are symbolic.
 
 use crate::expression::ArithmosExpression;
 use crate::geometry::vector::ArithmosVector;
@@ -47,4 +47,3 @@ mod tests {
         let _ = line.origin;
     }
 }
-

@@ -73,7 +73,7 @@ fn default_true() -> bool {
 pub static SYMBOL_REGISTRY: Lazy<RwLock<HashMap<String, ArithmosExpression>>> =
     Lazy::new(|| RwLock::new(HashMap::new()));
 
-/// User-tunable enable flags. Maps symbol â†’ `true|false`. Off-by-default
+/// User-tunable enable flags. Maps symbol → `true|false`. Off-by-default
 /// constants are skipped during symbol resolution.
 #[derive(Debug, Clone, Default)]
 pub struct ArithmosConstantConfig {
@@ -115,7 +115,7 @@ pub fn lookup_symbol(symbol: &str) -> Option<ArithmosExpression> {
 pub fn register_symbol(symbol: String, expr: ArithmosExpression) -> Result<(), String> {
     let mut registry = SYMBOL_REGISTRY.write();
     if registry.contains_key(&symbol) {
-        return Err(format!("Symbol '{}' is already registered", symbol));
+        return Err(format!("Symbol '{symbol}' is already registered"));
     }
     registry.insert(symbol, expr);
     Ok(())
@@ -236,7 +236,10 @@ mod tests {
         ArithmosConstants::initialize_defaults().expect("defaults must load");
         let pi = lookup_symbol("\u{3c0}").expect("π must be registered");
         let v = pi.to_f64().expect("π must carry a cached value");
-        assert!((v - std::f64::consts::PI).abs() < 1e-12, "π resolved to {v}");
+        assert!(
+            (v - std::f64::consts::PI).abs() < 1e-12,
+            "π resolved to {v}"
+        );
     }
 
     #[test]
@@ -253,7 +256,10 @@ mod tests {
     fn initialize_defaults_is_idempotent() {
         let first = ArithmosConstants::initialize_defaults().expect("first load");
         let second = ArithmosConstants::initialize_defaults().expect("second load");
-        assert_eq!(first, second, "reloading must not error or change the count");
+        assert_eq!(
+            first, second,
+            "reloading must not error or change the count"
+        );
     }
 
     #[test]
@@ -262,4 +268,3 @@ mod tests {
         assert!(load_constants_from_json(bad).is_err());
     }
 }
-

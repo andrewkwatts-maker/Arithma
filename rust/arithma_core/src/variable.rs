@@ -118,4 +118,3 @@ mod tests {
         assert_eq!(v.unit.as_deref(), Some("m/s"));
     }
 }
-

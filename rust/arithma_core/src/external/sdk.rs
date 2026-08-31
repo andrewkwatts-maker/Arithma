@@ -15,4 +15,3 @@ mod tests {
     #[test]
     fn module_compiles() {}
 }
-

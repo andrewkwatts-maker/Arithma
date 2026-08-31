@@ -306,4 +306,3 @@ mod tests {
         assert_eq!(ArithmosInteger::from_i64(-7).to_f64(), -7.0);
     }
 }
-

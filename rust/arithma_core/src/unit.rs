@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 
 /// A unit of measure (e.g. "meter", "kilogram"). Composite units like
-/// "mÂ·sâ»Â¹" are stored as a `Vec<(ArithmosUnit, i32)>` exponent list elsewhere;
+/// "m·s⁻¹" are stored as a `Vec<(ArithmosUnit, i32)>` exponent list elsewhere;
 /// this struct represents one base or derived unit.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ArithmosUnit {
@@ -24,7 +24,10 @@ pub struct ArithmosUnit {
 
 impl ArithmosUnit {
     pub fn new(symbol: impl Into<String>, name: impl Into<String>) -> Self {
-        Self { symbol: symbol.into(), name: name.into() }
+        Self {
+            symbol: symbol.into(),
+            name: name.into(),
+        }
     }
 }
 
@@ -39,4 +42,3 @@ mod tests {
         assert_eq!(u.name, "meter");
     }
 }
-

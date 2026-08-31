@@ -39,17 +39,17 @@ impl ArithmosVector {
         }
     }
 
-    /// Dot product `self Â· other`. Wave-2 stub.
+    /// Dot product `self · other`. Wave-2 stub.
     pub fn dot(&self, _other: &Self) -> ArithmosExpression {
         unimplemented!("ArithmosVector::dot — populated in Wave 3")
     }
 
-    /// Cross product `self Ã— other`. Wave-2 stub.
+    /// Cross product `self × other`. Wave-2 stub.
     pub fn cross(&self, _other: &Self) -> Self {
         unimplemented!("ArithmosVector::cross — populated in Wave 3")
     }
 
-    /// Squared magnitude `self Â· self`.
+    /// Squared magnitude `self · self`.
     pub fn magnitude_squared(&self) -> ArithmosExpression {
         self.dot(self)
     }
@@ -67,4 +67,3 @@ mod tests {
         assert!(matches!(v.z, ArithmosExpression::Number(_)));
     }
 }
-

@@ -55,7 +55,7 @@ use std::collections::HashMap;
 use crate::function::ArithmosFunction;
 use crate::integer::ArithmosInteger;
 
-/// SI unit prefixes spanning yocto (10â»Â²â´) through yotta (10Â²â´).
+/// SI unit prefixes spanning yocto (10⁻²⁴) through yotta (10²⁴).
 ///
 /// Lives in the expression module because constants and functions both use
 /// prefixes when emitting numeric values with units. The prefix is stored
@@ -184,7 +184,7 @@ pub enum ArithmosExpression {
         expression: Box<ArithmosExpression>,
     },
 
-    /// Limit lim_{var â†’ approaching} expression. `from_right` distinguishes the
+    /// Limit lim_{var → approaching} expression. `from_right` distinguishes the
     /// one-sided variants.
     Limit {
         variable: String,
@@ -258,7 +258,7 @@ impl ArithmosExpression {
     ///
     /// Currently routes through the integer constructor when `f` is an exact
     /// integer in the i64 range; otherwise wraps `f` as a `Number / Number`
-    /// rational with a fixed denominator scale. NaN and Â±âˆž get the matching
+    /// rational with a fixed denominator scale. NaN and ±∞ get the matching
     /// `ArithmosInteger` sentinel.
     pub fn from_f64(f: f64) -> Self {
         if f.is_nan() {
@@ -521,7 +521,10 @@ fn arithmos_apply_function(
     args: &[f64],
 ) -> Result<f64, String> {
     use crate::function::ArithmosFunction as F;
-    debug_assert!(!args.is_empty() || matches!(func, F::Sum | F::Product { .. }), "no args for {:?}", func);
+    debug_assert!(
+        !args.is_empty() || matches!(func, F::Sum | F::Product { .. }),
+        "no args for {func:?}"
+    );
     match func {
         F::Add => Ok(args.iter().sum()),
         F::Subtract => {
@@ -578,7 +581,7 @@ fn arithmos_apply_function(
         F::Floor => Ok(args[0].floor()),
         F::Ceil => Ok(args[0].ceil()),
         F::Round => Ok(args[0].round()),
-        _ => Err(format!("evaluate: unsupported function {:?}", func)),
+        _ => Err(format!("evaluate: unsupported function {func:?}")),
     }
 }
 
@@ -603,16 +606,20 @@ impl Evaluable for ArithmosExpression {
             match frame {
                 Frame::Enter(node) => match node {
                     ArithmosExpression::Number(n) => values.push(n.to_f64()),
-                    ArithmosExpression::Constant { cached_value, symbol, .. } => {
+                    ArithmosExpression::Constant {
+                        cached_value,
+                        symbol,
+                        ..
+                    } => {
                         if let Some(v) = *cached_value {
                             values.push(v);
                         } else {
-                            return Err(format!("constant '{}' has no cached value", symbol));
+                            return Err(format!("constant '{symbol}' has no cached value"));
                         }
                     }
                     ArithmosExpression::Variable(name) => match bindings.get(name) {
                         Some(v) => values.push(*v),
-                        None => return Err(format!("unbound variable '{}'", name)),
+                        None => return Err(format!("unbound variable '{name}'")),
                     },
                     ArithmosExpression::Function(func, args) => {
                         work.push(Frame::CombineFunc(func, args.len()));
@@ -729,4 +736,3 @@ mod tests {
         assert!(matches!(out, ArithmosExpression::Variable(_)));
     }
 }
-

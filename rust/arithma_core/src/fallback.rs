@@ -26,7 +26,7 @@
 
 use crate::expression::ArithmosExpression;
 
-// â”€â”€â”€ Strategy enum â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Strategy enum ─────────────────────────────────────────────────────────
 
 /// Strategy used when a backend fails or refuses an expression.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,7 +46,7 @@ impl Default for ArithmosFallbackStrategy {
 }
 
 /// Try the next strategy in a chain. Wave-2 stub: returns the strategy
-/// unchanged. Wave 3 wires up the actual chain (Numeric â†’ Symbolic â†’ Error).
+/// unchanged. Wave 3 wires up the actual chain (Numeric → Symbolic → Error).
 pub fn try_fallback(
     _expr: &ArithmosExpression,
     strategy: ArithmosFallbackStrategy,
@@ -54,7 +54,7 @@ pub fn try_fallback(
     strategy
 }
 
-// â”€â”€â”€ Trait contract â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Trait contract ────────────────────────────────────────────────────────
 
 /// A function that can have one or more external implementations with a
 /// pure-Rust fallback. Concrete impls live in pt-arithmos
@@ -75,15 +75,19 @@ pub trait ArithmosFallbackFunction<Expr> {
     /// Optional external-implementation lookup name. When `Some(name)`
     /// the registry first asks the external registry by `name`; if
     /// that fails the chain falls through to `rust_implementation`.
-    fn external_function_name(&self) -> Option<&str> { None }
+    fn external_function_name(&self) -> Option<&str> {
+        None
+    }
 
     /// Whether this function should prefer external implementation
     /// when both paths are available. Defaults to `true` — external
     /// libraries usually win on speed for ops they specialise in.
-    fn prefer_external(&self) -> bool { true }
+    fn prefer_external(&self) -> bool {
+        true
+    }
 }
 
-// â”€â”€â”€ Per-function statistics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Per-function statistics ───────────────────────────────────────────────
 
 /// Telemetry for a single registered function. The registry surfaces
 /// these for debug dashboards and adaptive routing decisions.
@@ -125,8 +129,11 @@ impl ArithmosFallbackStats {
     /// External success ratio in `[0.0, 1.0]`. Returns `None` when no
     /// external calls have happened yet (avoids 0/0 NaN).
     pub fn external_success_ratio(&self) -> Option<f64> {
-        if self.external_calls == 0 { None }
-        else { Some(self.external_successes as f64 / self.external_calls as f64) }
+        if self.external_calls == 0 {
+            None
+        } else {
+            Some(self.external_successes as f64 / self.external_calls as f64)
+        }
     }
 
     /// Reset all counters.
@@ -139,14 +146,17 @@ impl ArithmosFallbackStats {
 mod tests {
     use super::*;
 
-    // â”€â”€â”€ strategy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── strategy ─────────────────────────────────────────────────────────
 
     #[test]
     fn default_strategy_is_symbolic() {
-        assert_eq!(ArithmosFallbackStrategy::default(), ArithmosFallbackStrategy::Symbolic);
+        assert_eq!(
+            ArithmosFallbackStrategy::default(),
+            ArithmosFallbackStrategy::Symbolic
+        );
     }
 
-    // â”€â”€â”€ stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── stats ────────────────────────────────────────────────────────────
 
     #[test]
     fn stats_default_is_zero() {
@@ -195,8 +205,10 @@ mod tests {
     #[test]
     fn stats_saturating_add_does_not_overflow() {
         let mut s = ArithmosFallbackStats {
-            total_calls: u64::MAX, external_calls: u64::MAX,
-            external_successes: u64::MAX, fallback_calls: u64::MAX,
+            total_calls: u64::MAX,
+            external_calls: u64::MAX,
+            external_successes: u64::MAX,
+            fallback_calls: u64::MAX,
         };
         s.record_external_success();
         // saturating_add caps at u64::MAX rather than wrapping.
@@ -214,13 +226,15 @@ mod tests {
         assert_eq!(s, ArithmosFallbackStats::default());
     }
 
-    // â”€â”€â”€ trait — stub impl â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── trait — stub impl ─────────────────────────────────────────────────
 
     /// Pretend "sin" function — sums all f64 args (intentionally trivial)
     /// to exercise the trait surface.
     struct StubSin;
     impl ArithmosFallbackFunction<f64> for StubSin {
-        fn function_id(&self) -> &str { "stub_sin" }
+        fn function_id(&self) -> &str {
+            "stub_sin"
+        }
         fn rust_implementation(&self, args: &[f64]) -> Result<f64, String> {
             if args.len() != 1 {
                 return Err("stub_sin expects 1 arg".into());
@@ -252,7 +266,9 @@ mod tests {
         let s = StubSin;
         let r = s.rust_implementation(&[0.0]).unwrap();
         assert!(r.abs() < 1e-12);
-        let r = s.rust_implementation(&[std::f64::consts::FRAC_PI_2]).unwrap();
+        let r = s
+            .rust_implementation(&[std::f64::consts::FRAC_PI_2])
+            .unwrap();
         assert!((r - 1.0).abs() < 1e-12);
     }
 
@@ -263,4 +279,3 @@ mod tests {
         assert!(s.rust_implementation(&[1.0, 2.0]).is_err());
     }
 }
-

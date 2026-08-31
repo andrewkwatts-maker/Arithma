@@ -12,7 +12,7 @@
 //! Compile-time and runtime simplification rules.
 //!
 //! Compile-time rules are pure rewrites we can apply at expression construction
-//! time (e.g. `0 + x â†’ x`, `1 * x â†’ x`, `0 * x â†’ 0`). Runtime rules require a
+//! time (e.g. `0 + x → x`, `1 * x → x`, `0 * x → 0`). Runtime rules require a
 //! [`SimplificationConfig`] policy and are dispatched from [`run`].
 
 use crate::expression::{ArithmosExpression, SimplificationConfig};
@@ -61,4 +61,3 @@ mod tests {
         assert!(!run_compile_time(&mut expr));
     }
 }
-

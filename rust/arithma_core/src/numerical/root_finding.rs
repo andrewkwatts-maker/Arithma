@@ -85,4 +85,3 @@ mod tests {
         assert!(cfg.max_iterations > 0);
     }
 }
-

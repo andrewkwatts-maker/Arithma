@@ -30,110 +30,110 @@
 //! …) that returned `PTExpression` results stay in pt-arithmos for now;
 //! they migrate here once `ArithmosExpression` graduates from stub.
 
-// â”€â”€â”€ Algebraic simplifications (2000-series) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Algebraic simplifications (2000-series) ───────────────────────────────
 
 /// Algebraic-identity hash slots. e.g. `ZERO_PLUS_X = 2000` for the rewrite
-/// rule `0 + x â†’ x`. The fast-path simplifier consults these to short-circuit
+/// rule `0 + x → x`. The fast-path simplifier consults these to short-circuit
 /// trivial expressions before invoking the full simplifier.
 pub mod algebraic_ids {
-    pub const ZERO_PLUS_X: u32 = 2000;       // 0 + x = x
-    pub const X_PLUS_ZERO: u32 = 2001;       // x + 0 = x
-    pub const ZERO_TIMES_X: u32 = 2002;      // 0 * x = 0
-    pub const X_TIMES_ZERO: u32 = 2003;      // x * 0 = 0
-    pub const ONE_TIMES_X: u32 = 2004;       // 1 * x = x
-    pub const X_TIMES_ONE: u32 = 2005;       // x * 1 = x
-    pub const X_MINUS_X: u32 = 2006;         // x - x = 0
-    pub const X_DIVIDED_BY_X: u32 = 2007;    // x / x = 1
-    pub const X_DIVIDED_BY_ONE: u32 = 2008;  // x / 1 = x
+    pub const ZERO_PLUS_X: u32 = 2000; // 0 + x = x
+    pub const X_PLUS_ZERO: u32 = 2001; // x + 0 = x
+    pub const ZERO_TIMES_X: u32 = 2002; // 0 * x = 0
+    pub const X_TIMES_ZERO: u32 = 2003; // x * 0 = 0
+    pub const ONE_TIMES_X: u32 = 2004; // 1 * x = x
+    pub const X_TIMES_ONE: u32 = 2005; // x * 1 = x
+    pub const X_MINUS_X: u32 = 2006; // x - x = 0
+    pub const X_DIVIDED_BY_X: u32 = 2007; // x / x = 1
+    pub const X_DIVIDED_BY_ONE: u32 = 2008; // x / 1 = x
     pub const ZERO_DIVIDED_BY_X: u32 = 2009; // 0 / x = 0
-    pub const X_POW_ZERO: u32 = 2010;        // x^0 = 1
-    pub const X_POW_ONE: u32 = 2011;         // x^1 = x
-    pub const ONE_POW_X: u32 = 2012;         // 1^x = 1
+    pub const X_POW_ZERO: u32 = 2010; // x^0 = 1
+    pub const X_POW_ONE: u32 = 2011; // x^1 = x
+    pub const ONE_POW_X: u32 = 2012; // 1^x = 1
 }
 
-// â”€â”€â”€ Standard integrals (3000-series) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Standard integrals (3000-series) ──────────────────────────────────────
 
 pub mod integral_ids {
-    pub const INTEGRAL_X: u32 = 3000;             // âˆ«x dx = xÂ²/2
-    pub const INTEGRAL_X_SQUARED: u32 = 3001;     // âˆ«xÂ² dx = xÂ³/3
-    pub const INTEGRAL_ONE_OVER_X: u32 = 3002;    // âˆ«1/x dx = ln(x)
-    pub const INTEGRAL_E_POW_X: u32 = 3003;       // âˆ«e^x dx = e^x
-    pub const INTEGRAL_SIN_X: u32 = 3004;         // âˆ«sin(x) dx = -cos(x)
-    pub const INTEGRAL_COS_X: u32 = 3005;         // âˆ«cos(x) dx = sin(x)
-    pub const INTEGRAL_TAN_X: u32 = 3006;         // âˆ«tan(x) dx = -ln(|cos(x)|)
-    pub const INTEGRAL_SEC_SQUARED_X: u32 = 3007; // âˆ«secÂ²(x) dx = tan(x)
-    pub const INTEGRAL_ONE: u32 = 3008;           // âˆ«1 dx = x
-    pub const INTEGRAL_SQRT_X: u32 = 3009;        // âˆ«âˆšx dx = (2/3)x^(3/2)
+    pub const INTEGRAL_X: u32 = 3000; // ∫x dx = x²/2
+    pub const INTEGRAL_X_SQUARED: u32 = 3001; // ∫x² dx = x³/3
+    pub const INTEGRAL_ONE_OVER_X: u32 = 3002; // ∫1/x dx = ln(x)
+    pub const INTEGRAL_E_POW_X: u32 = 3003; // ∫e^x dx = e^x
+    pub const INTEGRAL_SIN_X: u32 = 3004; // ∫sin(x) dx = -cos(x)
+    pub const INTEGRAL_COS_X: u32 = 3005; // ∫cos(x) dx = sin(x)
+    pub const INTEGRAL_TAN_X: u32 = 3006; // ∫tan(x) dx = -ln(|cos(x)|)
+    pub const INTEGRAL_SEC_SQUARED_X: u32 = 3007; // ∫sec²(x) dx = tan(x)
+    pub const INTEGRAL_ONE: u32 = 3008; // ∫1 dx = x
+    pub const INTEGRAL_SQRT_X: u32 = 3009; // ∫√x dx = (2/3)x^(3/2)
 }
 
-// â”€â”€â”€ Derivatives (4000-series) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Derivatives (4000-series) ─────────────────────────────────────────────
 
 pub mod derivative_ids {
-    pub const DERIVATIVE_X: u32 = 4000;          // d/dx[x] = 1
-    pub const DERIVATIVE_X_SQUARED: u32 = 4001;  // d/dx[xÂ²] = 2x
-    pub const DERIVATIVE_SIN_X: u32 = 4002;      // d/dx[sin(x)] = cos(x)
-    pub const DERIVATIVE_COS_X: u32 = 4003;      // d/dx[cos(x)] = -sin(x)
-    pub const DERIVATIVE_TAN_X: u32 = 4004;      // d/dx[tan(x)] = secÂ²(x)
-    pub const DERIVATIVE_E_POW_X: u32 = 4005;    // d/dx[e^x] = e^x
-    pub const DERIVATIVE_LN_X: u32 = 4006;       // d/dx[ln(x)] = 1/x
-    pub const DERIVATIVE_CONSTANT: u32 = 4007;   // d/dx[c] = 0
+    pub const DERIVATIVE_X: u32 = 4000; // d/dx[x] = 1
+    pub const DERIVATIVE_X_SQUARED: u32 = 4001; // d/dx[x²] = 2x
+    pub const DERIVATIVE_SIN_X: u32 = 4002; // d/dx[sin(x)] = cos(x)
+    pub const DERIVATIVE_COS_X: u32 = 4003; // d/dx[cos(x)] = -sin(x)
+    pub const DERIVATIVE_TAN_X: u32 = 4004; // d/dx[tan(x)] = sec²(x)
+    pub const DERIVATIVE_E_POW_X: u32 = 4005; // d/dx[e^x] = e^x
+    pub const DERIVATIVE_LN_X: u32 = 4006; // d/dx[ln(x)] = 1/x
+    pub const DERIVATIVE_CONSTANT: u32 = 4007; // d/dx[c] = 0
 }
 
-// â”€â”€â”€ Standard limits (5000-series) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Standard limits (5000-series) ─────────────────────────────────────────
 
 pub mod limit_ids {
-    pub const LIMIT_SIN_X_OVER_X: u32 = 5000;             // lim[xâ†’0] sin(x)/x = 1
-    pub const LIMIT_TAN_X_OVER_X: u32 = 5001;             // lim[xâ†’0] tan(x)/x = 1
-    pub const LIMIT_EXP_MINUS_ONE_OVER_X: u32 = 5002;     // lim[xâ†’0] (e^x-1)/x = 1
-    pub const LIMIT_LN_ONE_PLUS_X_OVER_X: u32 = 5003;     // lim[xâ†’0] ln(1+x)/x = 1
-    pub const LIMIT_ONE_MINUS_COS_X_OVER_X_SQ: u32 = 5004;// lim[xâ†’0] (1-cos(x))/xÂ² = 1/2
-    pub const LIMIT_COMPOUND_INTEREST: u32 = 5005;        // lim[nâ†’âˆž] (1+1/n)^n = e
+    pub const LIMIT_SIN_X_OVER_X: u32 = 5000; // lim[x→0] sin(x)/x = 1
+    pub const LIMIT_TAN_X_OVER_X: u32 = 5001; // lim[x→0] tan(x)/x = 1
+    pub const LIMIT_EXP_MINUS_ONE_OVER_X: u32 = 5002; // lim[x→0] (e^x-1)/x = 1
+    pub const LIMIT_LN_ONE_PLUS_X_OVER_X: u32 = 5003; // lim[x→0] ln(1+x)/x = 1
+    pub const LIMIT_ONE_MINUS_COS_X_OVER_X_SQ: u32 = 5004; // lim[x→0] (1-cos(x))/x² = 1/2
+    pub const LIMIT_COMPOUND_INTEREST: u32 = 5005; // lim[n→∞] (1+1/n)^n = e
 }
 
-// â”€â”€â”€ Standard summations (6000-series) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Standard summations (6000-series) ─────────────────────────────────────
 
 pub mod sum_ids {
-    pub const SUM_LINEAR: u32 = 6000;             // Î£[k=1..n] k = n(n+1)/2
-    pub const SUM_SQUARES: u32 = 6001;            // Î£[k=1..n] kÂ² = n(n+1)(2n+1)/6
-    pub const SUM_CUBES: u32 = 6002;              // Î£[k=1..n] kÂ³ = (n(n+1)/2)Â²
-    pub const SUM_GEOMETRIC: u32 = 6003;          // Î£[k=0..n] ar^k = a(1-r^(n+1))/(1-r)
-    pub const SUM_INFINITE_GEOMETRIC: u32 = 6004; // Î£[k=0..âˆž] ar^k = a/(1-r) when |r|<1
-    pub const SUM_POWERS_OF_TWO: u32 = 6005;      // Î£[k=0..n] 2^k = 2^(n+1) - 1
-    pub const SUM_HARMONIC: u32 = 6006;           // Î£[k=1..n] 1/k â‰ˆ ln(n) + Î³
-    pub const SUM_RECIPROCAL_SQUARES: u32 = 6007; // Î£[k=1..âˆž] 1/kÂ² = πÂ²/6 (Basel)
+    pub const SUM_LINEAR: u32 = 6000; // Î£[k=1..n] k = n(n+1)/2
+    pub const SUM_SQUARES: u32 = 6001; // Î£[k=1..n] k² = n(n+1)(2n+1)/6
+    pub const SUM_CUBES: u32 = 6002; // Î£[k=1..n] k³ = (n(n+1)/2)²
+    pub const SUM_GEOMETRIC: u32 = 6003; // Î£[k=0..n] ar^k = a(1-r^(n+1))/(1-r)
+    pub const SUM_INFINITE_GEOMETRIC: u32 = 6004; // Î£[k=0..∞] ar^k = a/(1-r) when |r|<1
+    pub const SUM_POWERS_OF_TWO: u32 = 6005; // Î£[k=0..n] 2^k = 2^(n+1) - 1
+    pub const SUM_HARMONIC: u32 = 6006; // Î£[k=1..n] 1/k ≈ ln(n) + Î³
+    pub const SUM_RECIPROCAL_SQUARES: u32 = 6007; // Î£[k=1..∞] 1/k² = π²/6 (Basel)
 }
 
-// â”€â”€â”€ Logarithmic simplifications (collides with limit_ids in legacy) â”€â”€â”€â”€â”€â”€â”€
+// ─── Logarithmic simplifications (collides with limit_ids in legacy) ───────
 //
 // These reuse the 5000-series in pt-arithmos' flat namespace; preserved here
 // in the same numeric range so the equation-ID texture writer in
 // pt-arithmos and the reader in arithmos_core stay in lock-step. Use the
 // constant names, not the numeric values, when matching.
 pub mod logarithm_ids {
-    pub const LN_E: u32 = 5000;          // ln(e) = 1
-    pub const LN_ONE: u32 = 5001;        // ln(1) = 0
+    pub const LN_E: u32 = 5000; // ln(e) = 1
+    pub const LN_ONE: u32 = 5001; // ln(1) = 0
     pub const LOG_SAME_BASE: u32 = 5002; // log_b(b) = 1
 }
 
-// â”€â”€â”€ Exponential simplifications (collides with sum_ids in legacy) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Exponential simplifications (collides with sum_ids in legacy) ─────────
 
 pub mod exponential_ids {
     pub const E_POW_ZERO: u32 = 6000; // e^0 = 1
-    pub const E_POW_ONE: u32 = 6001;  // e^1 = e
+    pub const E_POW_ONE: u32 = 6001; // e^1 = e
     pub const E_POW_LN_X: u32 = 6002; // e^(ln(x)) = x
 }
 
-// â”€â”€â”€ Square-root simplifications (7000-series) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Square-root simplifications (7000-series) ─────────────────────────────
 
 pub mod sqrt_ids {
-    pub const SQRT_ZERO: u32 = 7000;       // âˆš0 = 0
-    pub const SQRT_ONE: u32 = 7001;        // âˆš1 = 1
-    pub const SQRT_FOUR: u32 = 7002;       // âˆš4 = 2
-    pub const SQRT_NINE: u32 = 7003;       // âˆš9 = 3
-    pub const SQRT_X_SQUARED: u32 = 7004;  // âˆš(xÂ²) = |x|
+    pub const SQRT_ZERO: u32 = 7000; // √0 = 0
+    pub const SQRT_ONE: u32 = 7001; // √1 = 1
+    pub const SQRT_FOUR: u32 = 7002; // √4 = 2
+    pub const SQRT_NINE: u32 = 7003; // √9 = 3
+    pub const SQRT_X_SQUARED: u32 = 7004; // √(x²) = |x|
 }
 
-// â”€â”€â”€ Category tagging â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Category tagging ──────────────────────────────────────────────────────
 
 /// Category an `*_ids` constant belongs to. Useful for the equation-ID
 /// texture writer when it needs to disambiguate same-numbered IDs across
@@ -161,8 +161,8 @@ pub fn classify(id: u32) -> Option<MathIdKind> {
         2000..=2099 => Some(MathIdKind::Algebraic),
         3000..=3099 => Some(MathIdKind::Integral),
         4000..=4099 => Some(MathIdKind::Derivative),
-        5000..=5099 => Some(MathIdKind::Limit),       // shadows Logarithm at 5000-5002
-        6000..=6099 => Some(MathIdKind::Sum),         // shadows Exponential at 6000-6002
+        5000..=5099 => Some(MathIdKind::Limit), // shadows Logarithm at 5000-5002
+        6000..=6099 => Some(MathIdKind::Sum),   // shadows Exponential at 6000-6002
         7000..=7099 => Some(MathIdKind::Sqrt),
         _ => None,
     }
@@ -172,28 +172,43 @@ pub fn classify(id: u32) -> Option<MathIdKind> {
 /// special value. Returns `None` otherwise. Wave-2 returns the f64 value;
 /// Wave-3 will return an `ArithmosExpression` once that AST graduates.
 pub fn lookup_exp(x: f64) -> Option<f64> {
-    if x == 0.0 { Some(1.0) }
-    else if x == 1.0 { Some(std::f64::consts::E) }
-    else if x.is_nan() { None }
-    else { None }
+    // NaN falls through to None along with every other unrecognised input —
+    // it needs no branch of its own (an equality test against NaN is false).
+    if x == 0.0 {
+        Some(1.0)
+    } else if x == 1.0 {
+        Some(std::f64::consts::E)
+    } else {
+        None
+    }
 }
 
 /// Look up an exact symbolic form for `ln(x)` if `x` matches a known
 /// special value.
 pub fn lookup_ln(x: f64) -> Option<f64> {
-    if x == 1.0 { Some(0.0) }
-    else if x == std::f64::consts::E { Some(1.0) }
-    else { None }
+    if x == 1.0 {
+        Some(0.0)
+    } else if x == std::f64::consts::E {
+        Some(1.0)
+    } else {
+        None
+    }
 }
 
 /// Look up an exact symbolic form for `sqrt(x)` if `x` matches a known
 /// special value.
 pub fn lookup_sqrt(x: f64) -> Option<f64> {
-    if x == 0.0 { Some(0.0) }
-    else if x == 1.0 { Some(1.0) }
-    else if x == 4.0 { Some(2.0) }
-    else if x == 9.0 { Some(3.0) }
-    else { None }
+    if x == 0.0 {
+        Some(0.0)
+    } else if x == 1.0 {
+        Some(1.0)
+    } else if x == 4.0 {
+        Some(2.0)
+    } else if x == 9.0 {
+        Some(3.0)
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -202,20 +217,38 @@ mod tests {
 
     #[test]
     fn classify_algebraic_range() {
-        assert_eq!(classify(algebraic_ids::ZERO_PLUS_X), Some(MathIdKind::Algebraic));
-        assert_eq!(classify(algebraic_ids::ONE_POW_X), Some(MathIdKind::Algebraic));
+        assert_eq!(
+            classify(algebraic_ids::ZERO_PLUS_X),
+            Some(MathIdKind::Algebraic)
+        );
+        assert_eq!(
+            classify(algebraic_ids::ONE_POW_X),
+            Some(MathIdKind::Algebraic)
+        );
     }
 
     #[test]
     fn classify_integral_range() {
-        assert_eq!(classify(integral_ids::INTEGRAL_X), Some(MathIdKind::Integral));
-        assert_eq!(classify(integral_ids::INTEGRAL_SQRT_X), Some(MathIdKind::Integral));
+        assert_eq!(
+            classify(integral_ids::INTEGRAL_X),
+            Some(MathIdKind::Integral)
+        );
+        assert_eq!(
+            classify(integral_ids::INTEGRAL_SQRT_X),
+            Some(MathIdKind::Integral)
+        );
     }
 
     #[test]
     fn classify_derivative_range() {
-        assert_eq!(classify(derivative_ids::DERIVATIVE_X), Some(MathIdKind::Derivative));
-        assert_eq!(classify(derivative_ids::DERIVATIVE_CONSTANT), Some(MathIdKind::Derivative));
+        assert_eq!(
+            classify(derivative_ids::DERIVATIVE_X),
+            Some(MathIdKind::Derivative)
+        );
+        assert_eq!(
+            classify(derivative_ids::DERIVATIVE_CONSTANT),
+            Some(MathIdKind::Derivative)
+        );
     }
 
     #[test]
@@ -237,16 +270,24 @@ mod tests {
     #[test]
     fn algebraic_ids_are_distinct_within_category() {
         let ids = [
-            algebraic_ids::ZERO_PLUS_X, algebraic_ids::X_PLUS_ZERO,
-            algebraic_ids::ZERO_TIMES_X, algebraic_ids::X_TIMES_ZERO,
-            algebraic_ids::ONE_TIMES_X, algebraic_ids::X_TIMES_ONE,
-            algebraic_ids::X_MINUS_X, algebraic_ids::X_DIVIDED_BY_X,
-            algebraic_ids::X_DIVIDED_BY_ONE, algebraic_ids::ZERO_DIVIDED_BY_X,
-            algebraic_ids::X_POW_ZERO, algebraic_ids::X_POW_ONE,
+            algebraic_ids::ZERO_PLUS_X,
+            algebraic_ids::X_PLUS_ZERO,
+            algebraic_ids::ZERO_TIMES_X,
+            algebraic_ids::X_TIMES_ZERO,
+            algebraic_ids::ONE_TIMES_X,
+            algebraic_ids::X_TIMES_ONE,
+            algebraic_ids::X_MINUS_X,
+            algebraic_ids::X_DIVIDED_BY_X,
+            algebraic_ids::X_DIVIDED_BY_ONE,
+            algebraic_ids::ZERO_DIVIDED_BY_X,
+            algebraic_ids::X_POW_ZERO,
+            algebraic_ids::X_POW_ONE,
             algebraic_ids::ONE_POW_X,
         ];
         let mut seen = std::collections::HashSet::new();
-        for id in ids { assert!(seen.insert(id)); }
+        for id in ids {
+            assert!(seen.insert(id));
+        }
     }
 
     #[test]
@@ -285,4 +326,3 @@ mod tests {
         assert_eq!(sqrt_ids::SQRT_ZERO, 7000);
     }
 }
-

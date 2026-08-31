@@ -17,7 +17,7 @@ use crate::probabilities::ArithmosDistribution;
 pub struct ArithmosQuantileFunction;
 
 impl ArithmosQuantileFunction {
-    /// Inverse CDF `Q(p) = inf{ x : F(x) â‰¥ p }`. Wave-2 stub.
+    /// Inverse CDF `Q(p) = inf{ x : F(x) ≥ p }`. Wave-2 stub.
     pub fn inverse_cdf(_dist: &dyn ArithmosDistribution, _p: f64) -> Result<f64, String> {
         unimplemented!("ArithmosQuantileFunction::inverse_cdf — populated in Wave 3")
     }
@@ -30,4 +30,3 @@ mod tests {
         assert!(true);
     }
 }
-

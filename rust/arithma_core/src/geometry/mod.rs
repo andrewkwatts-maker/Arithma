@@ -45,4 +45,3 @@ mod tests {
         let _: Option<ArithmosSphere> = None;
     }
 }
-

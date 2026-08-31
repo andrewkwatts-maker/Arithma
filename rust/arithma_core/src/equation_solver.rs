@@ -41,7 +41,7 @@ impl Default for ArithmosSolverStrategy {
 /// One root or solution branch returned by the solver.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArithmosSolution {
-    /// Symbolic form of the solution (e.g. `(-b Â± âˆš(bÂ²-4ac)) / (2a)`).
+    /// Symbolic form of the solution (e.g. `(-b ± √(b²-4ac)) / (2a)`).
     pub expression: ArithmosExpression,
     /// Optional cached numeric value.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -85,7 +85,9 @@ mod tests {
 
     #[test]
     fn default_strategy_is_auto() {
-        assert_eq!(ArithmosSolverStrategy::default(), ArithmosSolverStrategy::Auto);
+        assert_eq!(
+            ArithmosSolverStrategy::default(),
+            ArithmosSolverStrategy::Auto
+        );
     }
 }
-

@@ -576,18 +576,12 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmosExpression) -> PyResu
         ArithmosExpression::Number(n) => {
             let lst = PyList::new_bound(
                 py,
-                &[
-                    "num".into_py(py),
-                    integer_to_compact_string(n).into_py(py),
-                ],
+                &["num".into_py(py), integer_to_compact_string(n).into_py(py)],
             );
             Ok(lst.into())
         }
         ArithmosExpression::Variable(name) => {
-            let lst = PyList::new_bound(
-                py,
-                &["var".into_py(py), name.clone().into_py(py)],
-            );
+            let lst = PyList::new_bound(py, &["var".into_py(py), name.clone().into_py(py)]);
             Ok(lst.into())
         }
         ArithmosExpression::Constant {
@@ -677,9 +671,7 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmosExpression) -> PyResu
         // Performance-cache wrappers serialise as their underlying expression —
         // the cache state is rebuilt on demand by the engine.
         ArithmosExpression::CachedValue { expr, .. }
-        | ArithmosExpression::FourierOptimized { expr, .. } => {
-            expression_to_compact_py(py, expr)
-        }
+        | ArithmosExpression::FourierOptimized { expr, .. } => expression_to_compact_py(py, expr),
     }
 }
 
@@ -690,9 +682,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
         // Allow tuples too — JSON round-trip from Python typically yields lists,
         // but tuples are equally natural to write at the call site.
         let as_seq: Vec<Bound<'_, PyAny>> = blob.extract().map_err(|_| {
-            PyTypeError::new_err(
-                "Expression.from_compact expects a list or tuple at every level",
-            )
+            PyTypeError::new_err("Expression.from_compact expects a list or tuple at every level")
         })?;
         Ok::<Bound<'_, PyList>, PyErr>(PyList::new_bound(blob.py(), &as_seq))
     })?;
@@ -1054,9 +1044,9 @@ impl Expression {
     fn evaluate(&self, env: &Bound<'_, PyDict>) -> PyResult<f64> {
         let mut bindings: ArithmosBindings = ArithmosBindings::new();
         for (key, val) in env.iter() {
-            let k: String = key.extract().map_err(|_| {
-                PyTypeError::new_err("evaluate: bindings keys must be str")
-            })?;
+            let k: String = key
+                .extract()
+                .map_err(|_| PyTypeError::new_err("evaluate: bindings keys must be str"))?;
             let v: f64 = val.extract().map_err(|_| {
                 PyTypeError::new_err(format!("evaluate: binding {:?} must be number", k))
             })?;
@@ -1083,9 +1073,10 @@ impl Expression {
     /// dependency-graph walking.
     fn children(&self) -> Vec<Expression> {
         match &self.inner {
-            ArithmosExpression::Function(_, args) => {
-                args.iter().map(|a| Expression::from_inner(a.clone())).collect()
-            }
+            ArithmosExpression::Function(_, args) => args
+                .iter()
+                .map(|a| Expression::from_inner(a.clone()))
+                .collect(),
             ArithmosExpression::Sum {
                 start,
                 end,
@@ -1372,7 +1363,9 @@ impl Variable {
 
     fn __repr__(&self) -> String {
         match &self.inner.value {
-            ArithmosVariableValue::Unbound => format!("Variable({}, binding=None)", self.inner.name),
+            ArithmosVariableValue::Unbound => {
+                format!("Variable({}, binding=None)", self.inner.name)
+            }
             ArithmosVariableValue::Float(f) => {
                 format!("Variable({}, binding={})", self.inner.name, f)
             }

@@ -1,7 +1,7 @@
-# Rust
+﻿# Rust
 /target/
 **/*.rs.bk
-Cargo.lock
+# Cargo.lock is committed: this crate ships a published binary artifact
 
 # Python
 __pycache__/

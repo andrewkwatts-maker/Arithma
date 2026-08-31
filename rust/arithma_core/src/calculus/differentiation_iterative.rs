@@ -40,13 +40,22 @@ enum Combine {
     /// d/dx (a - b) = a' - b'
     Sub,
     /// d/dx (a * b) = a'*b + a*b'
-    Mul { a: ArithmosExpression, b: ArithmosExpression },
+    Mul {
+        a: ArithmosExpression,
+        b: ArithmosExpression,
+    },
     /// d/dx (a / b) = (a'*b - a*b') / b^2
-    Div { a: ArithmosExpression, b: ArithmosExpression },
+    Div {
+        a: ArithmosExpression,
+        b: ArithmosExpression,
+    },
     /// d/dx (a ^ k) = k * a^(k-1) * a'   when k is constant w.r.t. var
     /// We only support constant-exponent for the iterative pass; the general
     /// rule produces a `Function::Power` shape callers can simplify later.
-    Pow { base: ArithmosExpression, exponent: ArithmosExpression },
+    Pow {
+        base: ArithmosExpression,
+        exponent: ArithmosExpression,
+    },
     /// d/dx (-a) = -a'
     Neg,
     /// d/dx sqrt(a) = a' / (2 sqrt(a))
@@ -147,12 +156,9 @@ fn enter_node<'a>(
             results.push(dv);
             Ok(())
         }
-        ArithmosExpression::Function(func, args) => {
-            schedule_function(func, args, work)
-        }
+        ArithmosExpression::Function(func, args) => schedule_function(func, args, work),
         _ => Err(format!(
-            "differentiate: unsupported variant for variable '{}'",
-            var
+            "differentiate: unsupported variant for variable '{var}'"
         )),
     }
 }
@@ -224,36 +230,48 @@ fn schedule_function<'a>(
             Ok(())
         }
         ArithmosFunction::Sqrt => {
-            work.push(Frame::Combine(Combine::Sqrt { inner: args[0].clone() }));
+            work.push(Frame::Combine(Combine::Sqrt {
+                inner: args[0].clone(),
+            }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
         ArithmosFunction::Exp => {
-            work.push(Frame::Combine(Combine::Exp { inner: args[0].clone() }));
+            work.push(Frame::Combine(Combine::Exp {
+                inner: args[0].clone(),
+            }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
         ArithmosFunction::Ln => {
-            work.push(Frame::Combine(Combine::Ln { inner: args[0].clone() }));
+            work.push(Frame::Combine(Combine::Ln {
+                inner: args[0].clone(),
+            }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
         ArithmosFunction::Sin => {
-            work.push(Frame::Combine(Combine::Sin { inner: args[0].clone() }));
+            work.push(Frame::Combine(Combine::Sin {
+                inner: args[0].clone(),
+            }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
         ArithmosFunction::Cos => {
-            work.push(Frame::Combine(Combine::Cos { inner: args[0].clone() }));
+            work.push(Frame::Combine(Combine::Cos {
+                inner: args[0].clone(),
+            }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
         ArithmosFunction::Tan => {
-            work.push(Frame::Combine(Combine::Tan { inner: args[0].clone() }));
+            work.push(Frame::Combine(Combine::Tan {
+                inner: args[0].clone(),
+            }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        other => Err(format!("differentiate: unsupported function {:?}", other)),
+        other => Err(format!("differentiate: unsupported function {other:?}")),
     }
 }
 
@@ -290,7 +308,8 @@ fn combine_frame(c: Combine, results: &mut Vec<ArithmosExpression>) -> Result<()
         Combine::Pow { base, exponent } => {
             // We currently support the constant-exponent power rule.
             let da = pop_one(results)?;
-            let new_exp = ArithmosExpression::sub(exponent.clone(), ArithmosExpression::from_i64(1));
+            let new_exp =
+                ArithmosExpression::sub(exponent.clone(), ArithmosExpression::from_i64(1));
             let base_pow = ArithmosExpression::pow(base, new_exp);
             let scaled = ArithmosExpression::mul(exponent, base_pow);
             results.push(ArithmosExpression::mul(scaled, da));
@@ -376,7 +395,7 @@ mod tests {
         let mut bindings = ArithmosBindings::new();
         bindings.insert("x".to_string(), 3.0);
         let v = d.evaluate(&bindings).unwrap();
-        assert!((v - 6.0).abs() < 1e-9, "got {}", v);
+        assert!((v - 6.0).abs() < 1e-9, "got {v}");
     }
 
     #[test]
@@ -386,7 +405,6 @@ mod tests {
         let mut bindings = ArithmosBindings::new();
         bindings.insert("x".to_string(), 0.0);
         let v = d.evaluate(&bindings).unwrap();
-        assert!((v - 1.0).abs() < 1e-9, "got {}", v);
+        assert!((v - 1.0).abs() < 1e-9, "got {v}");
     }
 }
-

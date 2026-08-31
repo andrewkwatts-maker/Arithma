@@ -122,4 +122,3 @@ mod tests {
         assert_eq!(transform.sin_coeffs.len(), cfg.harmonics);
     }
 }
-

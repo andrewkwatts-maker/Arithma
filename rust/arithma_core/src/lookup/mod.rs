@@ -15,6 +15,5 @@
 //!
 //! Wave-2 stub. The real tables migrate from pt-arithmos in Wave 3.
 
-pub mod trig_hash;
 pub mod math_hash;
-
+pub mod trig_hash;

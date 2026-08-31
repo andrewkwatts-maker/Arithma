@@ -19,14 +19,18 @@ pub struct ArithmosTensor {
 }
 
 impl ArithmosTensor {
-    /// Total cell count = âˆ(shape).
+    /// Total cell count = ∏(shape).
     pub fn cell_count(shape: &[usize]) -> usize {
         shape.iter().product()
     }
 
-    /// Construct a tensor; panics if `cells.len()` â‰  âˆ(shape).
+    /// Construct a tensor; panics if `cells.len()` ≠ ∏(shape).
     pub fn new(shape: Vec<usize>, cells: Vec<ArithmosExpression>) -> Self {
-        assert_eq!(cells.len(), Self::cell_count(&shape), "cell count must equal âˆ(shape)");
+        assert_eq!(
+            cells.len(),
+            Self::cell_count(&shape),
+            "cell count must equal ∏(shape)"
+        );
         Self { shape, cells }
     }
 }
@@ -45,4 +49,3 @@ mod tests {
         assert_eq!(ArithmosTensor::cell_count(&[2, 3, 4]), 24);
     }
 }
-

@@ -87,4 +87,3 @@ mod tests {
         assert!(!simplify_iterative(&mut expr, &cfg));
     }
 }
-

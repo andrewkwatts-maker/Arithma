@@ -63,7 +63,11 @@ pub struct ArithmosCppExecutor {
 impl ArithmosCppExecutor {
     /// An executor with no C function bound. Reports `BackendUnavailable`.
     pub fn new(name: &'static str) -> Self {
-        Self { name, eval_fn: None, buffer_bytes: DEFAULT_BUFFER_BYTES }
+        Self {
+            name,
+            eval_fn: None,
+            buffer_bytes: DEFAULT_BUFFER_BYTES,
+        }
     }
 
     /// Bind a C evaluation function.
@@ -71,7 +75,11 @@ impl ArithmosCppExecutor {
     /// # Safety
     /// `eval_fn` must uphold the contract documented on [`ArithmosCppEvalFn`].
     pub unsafe fn with_handler(name: &'static str, eval_fn: ArithmosCppEvalFn) -> Self {
-        Self { name, eval_fn: Some(eval_fn), buffer_bytes: DEFAULT_BUFFER_BYTES }
+        Self {
+            name,
+            eval_fn: Some(eval_fn),
+            buffer_bytes: DEFAULT_BUFFER_BYTES,
+        }
     }
 
     /// Override the reply buffer size.
@@ -114,7 +122,11 @@ impl ArithmosBackend for ArithmosCppExecutor {
         // retained by the callee (documented on ArithmosCppEvalFn). No Rust
         // object is aliased while the call is in flight.
         let code = unsafe {
-            eval_fn(input.as_ptr(), buf.as_mut_ptr() as *mut c_char, self.buffer_bytes)
+            eval_fn(
+                input.as_ptr(),
+                buf.as_mut_ptr() as *mut c_char,
+                self.buffer_bytes,
+            )
         };
 
         // Read back as a C string so a short reply doesn't drag trailing NULs.
@@ -134,17 +146,16 @@ impl ArithmosBackend for ArithmosCppExecutor {
                 backend: self.name.to_string(),
                 op: reply,
             }),
-            status::BUFFER_TOO_SMALL => {
-                Err(ArithmosExternalFunctionError::EvaluationFailed(format!(
-                    "reply exceeded {} byte buffer",
-                    self.buffer_bytes
-                )))
-            }
-            _ => Err(ArithmosExternalFunctionError::EvaluationFailed(if reply.is_empty() {
-                format!("backend returned status {code}")
-            } else {
-                reply
-            })),
+            status::BUFFER_TOO_SMALL => Err(ArithmosExternalFunctionError::EvaluationFailed(
+                format!("reply exceeded {} byte buffer", self.buffer_bytes),
+            )),
+            _ => Err(ArithmosExternalFunctionError::EvaluationFailed(
+                if reply.is_empty() {
+                    format!("backend returned status {code}")
+                } else {
+                    reply
+                },
+            )),
         }
     }
 }
@@ -168,7 +179,11 @@ mod tests {
     unsafe extern "C" fn echo_42(_i: *const c_char, o: *mut c_char, n: usize) -> c_int {
         let expr = ArithmosExpression::from_i64(42);
         let json = serde_json::to_string(&expr).unwrap();
-        if write_reply(o, n, &json) { status::OK } else { status::BUFFER_TOO_SMALL }
+        if write_reply(o, n, &json) {
+            status::OK
+        } else {
+            status::BUFFER_TOO_SMALL
+        }
     }
 
     unsafe extern "C" fn unsupported(_i: *const c_char, o: *mut c_char, n: usize) -> c_int {

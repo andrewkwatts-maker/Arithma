@@ -7,7 +7,39 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  # The Rust core carries the great majority of this project's tests, and
+  # until now none of them ran in CI — only the Python facade was covered.
+  rust:
+    name: Rust core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test (default features)
+        run: cargo test --verbose
+
+      # Both are advertised in Cargo.toml and both were broken — their module
+      # files did not exist. Build them so that cannot regress unnoticed.
+      - name: Test (rust-support)
+        run: cargo test --features rust-support --verbose
+
+      - name: Test (cpp-support)
+        run: cargo test --features cpp-support --verbose
+
+  python:
+    name: Python facade
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -22,6 +54,8 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: Install build tools
         run: pip install --upgrade pip maturin
 
@@ -29,4 +63,4 @@ jobs:
         run: pip install .[dev]
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: pytest tests/ -v --tb=short --cov=arithma --cov-report=term-missing

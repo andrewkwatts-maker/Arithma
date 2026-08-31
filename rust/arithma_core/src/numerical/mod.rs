@@ -27,10 +27,10 @@ pub mod root_finding;
 
 pub use critical_points::{ArithmosCriticalPoint, ArithmosCriticalPointKind};
 pub use interval_analysis::ArithmosInterval;
-pub use methods::{ArithmosNumericalMethod, solve_with_method};
+pub use methods::{solve_with_method, ArithmosNumericalMethod};
 pub use root_finding::{
-    ArithmosRootFindingConfig, ArithmosRootFindingResult, find_root_bisection,
-    find_root_newton_raphson, find_root_secant,
+    find_root_bisection, find_root_newton_raphson, find_root_secant, ArithmosRootFindingConfig,
+    ArithmosRootFindingResult,
 };
 
 #[cfg(test)]
@@ -43,4 +43,3 @@ mod tests {
         let _: Option<ArithmosNumericalMethod> = None;
     }
 }
-

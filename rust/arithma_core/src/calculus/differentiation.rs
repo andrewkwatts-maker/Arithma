@@ -30,7 +30,10 @@ use crate::function::ArithmosFunction;
 pub fn differentiate(expr: &ArithmosExpression, var: &str) -> Result<ArithmosExpression, String> {
     debug_assert!(!var.is_empty(), "differentiate: empty variable name");
     let out = crate::calculus::differentiation_iterative::differentiate_iterative(expr, var)?;
-    debug_assert!(matches!(out, ArithmosExpression::Number(_) | _), "non-expression result");
+    debug_assert!(
+        matches!(out, ArithmosExpression::Number(_) | _),
+        "non-expression result"
+    );
     Ok(out)
 }
 
@@ -38,11 +41,7 @@ pub fn differentiate(expr: &ArithmosExpression, var: &str) -> Result<ArithmosExp
 ///
 /// Convenience that wraps `differentiate` on each operand and assembles a
 /// `Function::Add` from the parts.
-pub fn diff_sum(
-    a: &ArithmosExpression,
-    b: &ArithmosExpression,
-    var: &str,
-) -> ArithmosExpression {
+pub fn diff_sum(a: &ArithmosExpression, b: &ArithmosExpression, var: &str) -> ArithmosExpression {
     debug_assert!(!var.is_empty(), "diff_sum: empty variable name");
     let da = differentiate(a, var).unwrap_or_else(|_| ArithmosExpression::zero());
     let db = differentiate(b, var).unwrap_or_else(|_| ArithmosExpression::zero());
@@ -107,7 +106,7 @@ mod tests {
 
     #[test]
     fn diff_sum_evaluates() {
-        // d/dx (x + x^2) = 1 + 2x, at x = 4 â†’ 9.
+        // d/dx (x + x^2) = 1 + 2x, at x = 4 → 9.
         let a = ArithmosExpression::var("x");
         let b = ArithmosExpression::pow(
             ArithmosExpression::var("x"),
@@ -117,19 +116,19 @@ mod tests {
         let mut bindings = ArithmosBindings::new();
         bindings.insert("x".to_string(), 4.0);
         let v = d.evaluate(&bindings).unwrap();
-        assert!((v - 9.0).abs() < 1e-9, "got {}", v);
+        assert!((v - 9.0).abs() < 1e-9, "got {v}");
     }
 
     #[test]
     fn diff_product_evaluates_product_rule() {
-        // d/dx (x * x) = 1*x + x*1 = 2x, at x = 5 â†’ 10.
+        // d/dx (x * x) = 1*x + x*1 = 2x, at x = 5 → 10.
         let a = ArithmosExpression::var("x");
         let b = ArithmosExpression::var("x");
         let d = diff_product(&a, &b, "x");
         let mut bindings = ArithmosBindings::new();
         bindings.insert("x".to_string(), 5.0);
         let v = d.evaluate(&bindings).unwrap();
-        assert!((v - 10.0).abs() < 1e-9, "got {}", v);
+        assert!((v - 10.0).abs() < 1e-9, "got {v}");
     }
 
     #[test]
@@ -141,4 +140,3 @@ mod tests {
         assert!((v - 1.0).abs() < 1e-12);
     }
 }
-

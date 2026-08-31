@@ -14,12 +14,12 @@
 
 use crate::expression::ArithmosExpression;
 
-/// Indefinite integral âˆ« expr d{var}. Wave-2 stub.
+/// Indefinite integral ∫ expr d{var}. Wave-2 stub.
 pub fn integrate(_expr: &ArithmosExpression, _var: &str) -> Result<ArithmosExpression, String> {
     unimplemented!("integrate — populated in Wave 3")
 }
 
-/// Definite integral âˆ«_{lo}^{hi} expr d{var}. Wave-2 stub.
+/// Definite integral ∫_{lo}^{hi} expr d{var}. Wave-2 stub.
 pub fn integrate_definite(
     _expr: &ArithmosExpression,
     _var: &str,
@@ -47,4 +47,3 @@ mod tests {
         assert!(true);
     }
 }
-

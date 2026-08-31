@@ -46,4 +46,3 @@ mod tests {
         assert!((ci.width() - 1.0).abs() < f64::EPSILON);
     }
 }
-

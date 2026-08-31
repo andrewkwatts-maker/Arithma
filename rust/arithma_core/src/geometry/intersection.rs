@@ -43,7 +43,10 @@ impl ArithmosIntersection {
     }
 
     /// Line vs sphere intersection. Wave-2 stub.
-    pub fn line_sphere(_line: &ArithmosLine, _sphere: &ArithmosSphere) -> ArithmosIntersectionResult {
+    pub fn line_sphere(
+        _line: &ArithmosLine,
+        _sphere: &ArithmosSphere,
+    ) -> ArithmosIntersectionResult {
         unimplemented!("ArithmosIntersection::line_sphere — populated in Wave 3")
     }
 
@@ -53,7 +56,10 @@ impl ArithmosIntersection {
     }
 
     /// Closest-point parameter `t` on a line for a target point.
-    pub fn closest_point_param(_line: &ArithmosLine, _point: &ArithmosVector) -> ArithmosExpression {
+    pub fn closest_point_param(
+        _line: &ArithmosLine,
+        _point: &ArithmosVector,
+    ) -> ArithmosExpression {
         unimplemented!("ArithmosIntersection::closest_point_param — populated in Wave 3")
     }
 }
@@ -68,4 +74,3 @@ mod tests {
         assert!(matches!(r, ArithmosIntersectionResult::None));
     }
 }
-

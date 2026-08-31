@@ -48,7 +48,12 @@ struct SiUnitDef {
 static REGISTRY: Lazy<HashMap<String, ArithmosUnit>> = Lazy::new(|| {
     let mut map = HashMap::new();
     if let Ok(doc) = serde_json::from_str::<SiUnitsDoc>(SI_UNITS_JSON) {
-        for def in doc.si_units.base_units.into_iter().chain(doc.si_units.derived_units) {
+        for def in doc
+            .si_units
+            .base_units
+            .into_iter()
+            .chain(doc.si_units.derived_units)
+        {
             map.insert(def.symbol.clone(), ArithmosUnit::new(def.symbol, def.name));
         }
     }
@@ -105,11 +110,10 @@ mod tests {
     #[test]
     fn base_units_resolve() {
         for (sym, name) in [("m", "meter"), ("kg", "kilogram"), ("s", "second")] {
-            let u = ArithmosSIUnits::lookup(sym)
-                .unwrap_or_else(|| panic!("base unit '{sym}' missing"));
+            let u =
+                ArithmosSIUnits::lookup(sym).unwrap_or_else(|| panic!("base unit '{sym}' missing"));
             assert_eq!(u.symbol, sym);
             assert_eq!(u.name, name);
         }
     }
 }
-

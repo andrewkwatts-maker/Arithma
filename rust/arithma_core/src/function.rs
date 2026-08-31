@@ -42,9 +42,9 @@ use crate::integer::ArithmosInteger;
 /// Direction marker for one-sided limits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ArithmosLimitDirection {
-    /// Approach from the left (x â†’ aâ»).
+    /// Approach from the left (x → a⁻).
     Left,
-    /// Approach from the right (x â†’ aâº).
+    /// Approach from the right (x → a⁺).
     Right,
     /// Two-sided.
     Both,
@@ -276,4 +276,3 @@ mod tests {
         assert_eq!(ArithmosFunction::StandardScore.arity(), 3);
     }
 }
-
