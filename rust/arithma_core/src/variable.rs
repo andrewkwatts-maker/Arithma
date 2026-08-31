@@ -20,7 +20,7 @@ use crate::expression::ArithmosExpression;
 /// The runtime value attached to a variable. Either a numeric literal or a
 /// symbolic expression — the second form is what enables `x = 2π` style
 /// derived variables that retain symbolic structure for further simplification.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum ArithmosVariableValue {
     /// Bound to a literal f64. Used for fast numeric evaluation paths.
     Float(f64),
@@ -29,13 +29,8 @@ pub enum ArithmosVariableValue {
     Symbolic(Box<ArithmosExpression>),
     /// Unbound — referencing the variable in an evaluator returns
     /// `Err("unbound variable")`.
+    #[default]
     Unbound,
-}
-
-impl Default for ArithmosVariableValue {
-    fn default() -> Self {
-        Self::Unbound
-    }
 }
 
 /// A named variable with an optional bound value and optional unit.

@@ -20,9 +20,10 @@ use crate::expression::ArithmosExpression;
 
 /// Strategy hint for the solver. Implementations may ignore it and use their
 /// own heuristics, but this gives callers a way to express priorities.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum ArithmosSolverStrategy {
     /// Auto-detect (default).
+    #[default]
     Auto,
     /// Force the algebraic / closed-form path.
     Algebraic,
@@ -30,12 +31,6 @@ pub enum ArithmosSolverStrategy {
     Numeric,
     /// Try algebraic, fall back to numeric.
     Hybrid,
-}
-
-impl Default for ArithmosSolverStrategy {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 /// One root or solution branch returned by the solver.

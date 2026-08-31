@@ -29,20 +29,15 @@ use crate::expression::ArithmosExpression;
 // ─── Strategy enum ─────────────────────────────────────────────────────────
 
 /// Strategy used when a backend fails or refuses an expression.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ArithmosFallbackStrategy {
     /// Drop to numeric f64 if all leaves can be evaluated to f64.
     Numeric,
     /// Return the expression unchanged.
+    #[default]
     Symbolic,
     /// Surface the error to the caller.
     Error,
-}
-
-impl Default for ArithmosFallbackStrategy {
-    fn default() -> Self {
-        Self::Symbolic
-    }
 }
 
 /// Try the next strategy in a chain. Wave-2 stub: returns the strategy
