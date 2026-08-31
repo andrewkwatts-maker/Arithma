@@ -99,8 +99,8 @@ impl ArithmosConstants {
     }
 
     /// Initialise the registry from `default_constants.json`. Idempotent — safe
-    /// to call multiple times.
-    pub fn initialize_defaults() -> Result<(), String> {
+    /// to call multiple times. Returns the number of symbols registered.
+    pub fn initialize_defaults() -> Result<usize, String> {
         load_constants_from_json(DEFAULT_CONSTANTS_JSON)
     }
 }
@@ -157,15 +157,48 @@ fn strip_jsonc_header(jsonc: &str) -> String {
     out
 }
 
-/// Load constants from a JSON string. Stub for Wave 2; Wave 3 wires up the
-/// real expression-tree parser.
-pub fn load_constants_from_json(json: &str) -> Result<(), String> {
-    // Wave 2: validate that the JSON parses as an array-or-object form so the
-    // call surface is correct, even though we don't yet register anything.
+/// Load constants from a JSON string into [`SYMBOL_REGISTRY`].
+///
+/// The document is an array of [`ArithmosConstantDef`]. Entries with
+/// `enabled: false` are skipped. Registration uses [`reregister_symbol`] so the
+/// call is idempotent — [`ArithmosConstants::initialize_defaults`] documents
+/// itself as safe to call repeatedly, which a duplicate-key error would break.
+///
+/// Returns the number of symbols registered.
+pub fn load_constants_from_json(json: &str) -> Result<usize, String> {
     let cleaned = strip_jsonc_header(json);
-    let _: serde_json::Value = serde_json::from_str(&cleaned)
+    let defs: Vec<ArithmosConstantDef> = serde_json::from_str(&cleaned)
         .map_err(|e| format!("Failed to parse constants JSON: {e}"))?;
-    Ok(())
+
+    let mut registered = 0_usize;
+    for def in defs {
+        if !def.enabled {
+            continue;
+        }
+        if def.symbol.is_empty() {
+            return Err("constant entry has an empty symbol".to_string());
+        }
+        // A constant with neither a cached value nor an expression cannot be
+        // evaluated, and silently registering it would resurrect the class of
+        // bug this function is fixing.
+        if def.cached_value.is_none() && def.expression.is_none() {
+            return Err(format!(
+                "constant '{}' has neither cached_value nor expression",
+                def.symbol
+            ));
+        }
+        let expr = ArithmosExpression::Constant {
+            name: def.name.clone(),
+            symbol: def.symbol.clone(),
+            cached_value: def.cached_value,
+            allow_simplification: def.allow_simplification,
+            unit: def.unit.clone(),
+            prefix: None,
+        };
+        reregister_symbol(def.symbol, expr);
+        registered += 1;
+    }
+    Ok(registered)
 }
 
 #[cfg(test)]
@@ -186,6 +219,47 @@ mod tests {
     #[test]
     fn lookup_unknown_returns_none() {
         assert!(lookup_symbol("__definitely_not_registered__").is_none());
+    }
+
+    #[test]
+    fn defaults_actually_register() {
+        // The regression this guards: load_constants_from_json used to parse
+        // the document and register nothing, leaving SYMBOL_REGISTRY empty so
+        // every constant lookup returned None.
+        let n = ArithmosConstants::initialize_defaults().expect("defaults must load");
+        assert!(n >= 30, "expected the full catalogue, registered {n}");
+        assert!(registered_count() >= n);
+    }
+
+    #[test]
+    fn pi_resolves_to_its_value() {
+        ArithmosConstants::initialize_defaults().expect("defaults must load");
+        let pi = lookup_symbol("\u{3c0}").expect("π must be registered");
+        let v = pi.to_f64().expect("π must carry a cached value");
+        assert!((v - std::f64::consts::PI).abs() < 1e-12, "π resolved to {v}");
+    }
+
+    #[test]
+    fn e_and_phi_resolve() {
+        ArithmosConstants::initialize_defaults().expect("defaults must load");
+        let e = lookup_symbol("e").expect("e must be registered");
+        assert!((e.to_f64().unwrap() - std::f64::consts::E).abs() < 1e-12);
+        // φ carries use_expression: true but still ships a cached value.
+        let phi = lookup_symbol("\u{3c6}").expect("φ must be registered");
+        assert!((phi.to_f64().unwrap() - 1.618_033_988_749_895).abs() < 1e-12);
+    }
+
+    #[test]
+    fn initialize_defaults_is_idempotent() {
+        let first = ArithmosConstants::initialize_defaults().expect("first load");
+        let second = ArithmosConstants::initialize_defaults().expect("second load");
+        assert_eq!(first, second, "reloading must not error or change the count");
+    }
+
+    #[test]
+    fn entry_without_value_or_expression_is_rejected() {
+        let bad = r#"[{"symbol":"zz","enabled":true}]"#;
+        assert!(load_constants_from_json(bad).is_err());
     }
 }
 
