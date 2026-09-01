@@ -11,17 +11,26 @@
 //!
 //! Inverse-CDF lookups. Wave-2 stub.
 
-use crate::probabilities::ArithmosDistribution;
+use crate::probabilities::ArithmaDistribution;
 
 /// Helper for evaluating inverse CDFs.
-pub struct ArithmosQuantileFunction;
+pub struct ArithmaQuantileFunction;
 
-impl ArithmosQuantileFunction {
+impl ArithmaQuantileFunction {
     /// Inverse CDF `Q(p) = inf{ x : F(x) ≥ p }`. Wave-2 stub.
-    pub fn inverse_cdf(_dist: &dyn ArithmosDistribution, _p: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosQuantileFunction::inverse_cdf — populated in Wave 3")
+    pub fn inverse_cdf(_dist: &dyn ArithmaDistribution, _p: f64) -> Result<f64, String> {
+        unimplemented!("ArithmaQuantileFunction::inverse_cdf — populated in Wave 3")
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaQuantileFunction`")]
+#[allow(unused)]
+pub use self::ArithmaQuantileFunction as ArithmosQuantileFunction;
 
 #[cfg(test)]
 mod tests {

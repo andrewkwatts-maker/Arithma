@@ -16,11 +16,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::expression::ArithmosExpression;
+use crate::expression::ArithmaExpression;
 
 /// Window function used by the discrete transform.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ArithmosFourierWindow {
+pub enum ArithmaFourierWindow {
     Rectangular,
     Hann,
     Hamming,
@@ -33,7 +33,7 @@ pub enum ArithmosFourierWindow {
 ///
 /// Mirrors `pt_arithmos::PTFourierConfig`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ArithmosFourierConfig {
+pub struct ArithmaFourierConfig {
     /// Number of samples in the discrete transform.
     pub sample_count: usize,
     /// Domain range over which the transform is computed.
@@ -44,17 +44,17 @@ pub struct ArithmosFourierConfig {
     /// addition / dropout.
     pub accuracy: f64,
     /// Window function applied before the transform.
-    pub window: ArithmosFourierWindow,
+    pub window: ArithmaFourierWindow,
 }
 
-impl Default for ArithmosFourierConfig {
+impl Default for ArithmaFourierConfig {
     fn default() -> Self {
         Self {
             sample_count: 1024,
             range: (-std::f64::consts::PI, std::f64::consts::PI),
             harmonics: 32,
             accuracy: 1e-6,
-            window: ArithmosFourierWindow::Hann,
+            window: ArithmaFourierWindow::Hann,
         }
     }
 }
@@ -63,9 +63,9 @@ impl Default for ArithmosFourierConfig {
 /// coefficient arrays alongside the originating config so re-evaluation is
 /// fully deterministic.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ArithmosFourierTransform {
+pub struct ArithmaFourierTransform {
     /// Configuration used to compute this transform.
-    pub config: ArithmosFourierConfig,
+    pub config: ArithmaFourierConfig,
     /// Cosine (real) coefficients.
     pub cos_coeffs: Vec<f64>,
     /// Sine (imaginary) coefficients.
@@ -74,9 +74,9 @@ pub struct ArithmosFourierTransform {
     pub dc: f64,
 }
 
-impl ArithmosFourierTransform {
+impl ArithmaFourierTransform {
     /// Empty transform for a given config.
-    pub fn empty(config: ArithmosFourierConfig) -> Self {
+    pub fn empty(config: ArithmaFourierConfig) -> Self {
         let h = config.harmonics;
         Self {
             config,
@@ -88,19 +88,34 @@ impl ArithmosFourierTransform {
 
     /// Reconstruct the value at `x` using the truncated Fourier series.
     pub fn evaluate(&self, _x: f64) -> f64 {
-        unimplemented!("ArithmosFourierTransform::evaluate — populated in Wave 3")
+        unimplemented!("ArithmaFourierTransform::evaluate — populated in Wave 3")
     }
 }
 
 /// Compute the Fourier transform of `expr` with respect to `var` over the
 /// configured range. Wave-2 stub.
 pub fn fourier_transform(
-    _expr: &ArithmosExpression,
+    _expr: &ArithmaExpression,
     _var: &str,
-    config: &ArithmosFourierConfig,
-) -> Result<ArithmosFourierTransform, String> {
-    Ok(ArithmosFourierTransform::empty(config.clone()))
+    config: &ArithmaFourierConfig,
+) -> Result<ArithmaFourierTransform, String> {
+    Ok(ArithmaFourierTransform::empty(config.clone()))
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaFourierConfig`")]
+#[allow(unused)]
+pub use self::ArithmaFourierConfig as ArithmosFourierConfig;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaFourierTransform`")]
+#[allow(unused)]
+pub use self::ArithmaFourierTransform as ArithmosFourierTransform;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaFourierWindow`")]
+#[allow(unused)]
+pub use self::ArithmaFourierWindow as ArithmosFourierWindow;
 
 #[cfg(test)]
 mod tests {
@@ -108,7 +123,7 @@ mod tests {
 
     #[test]
     fn default_config_is_sensible() {
-        let cfg = ArithmosFourierConfig::default();
+        let cfg = ArithmaFourierConfig::default();
         assert!(cfg.sample_count > 0);
         assert!(cfg.harmonics > 0);
         assert!(cfg.accuracy > 0.0);
@@ -116,8 +131,8 @@ mod tests {
 
     #[test]
     fn empty_transform_has_correct_size() {
-        let cfg = ArithmosFourierConfig::default();
-        let transform = ArithmosFourierTransform::empty(cfg.clone());
+        let cfg = ArithmaFourierConfig::default();
+        let transform = ArithmaFourierTransform::empty(cfg.clone());
         assert_eq!(transform.cos_coeffs.len(), cfg.harmonics);
         assert_eq!(transform.sin_coeffs.len(), cfg.harmonics);
     }

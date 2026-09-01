@@ -24,7 +24,7 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::expression::ArithmosExpression;
+use crate::expression::ArithmaExpression;
 
 /// `default_constants.json`, embedded into the binary at compile time. The
 /// engine and PyPI consumers never need to ship the JSON separately.
@@ -32,7 +32,7 @@ pub const DEFAULT_CONSTANTS_JSON: &str = include_str!("default_constants.json");
 
 /// JSON shape used by `default_constants.json`. Mirrors `PTConstantDef`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ArithmosConstantDef {
+pub struct ArithmaConstantDef {
     /// Friendly name (e.g. "Pi"). Optional.
     #[serde(default)]
     pub name: Option<String>,
@@ -69,32 +69,32 @@ fn default_true() -> bool {
 ///
 /// Constants and variables both live here; lookup-key uniqueness is enforced
 /// at registration time. Access goes through the helper functions in this
-/// module — never via `SYMBOL_REGISTRY.write()` directly from outside Arithmos.
-pub static SYMBOL_REGISTRY: Lazy<RwLock<HashMap<String, ArithmosExpression>>> =
+/// module — never via `SYMBOL_REGISTRY.write()` directly from outside Arithma.
+pub static SYMBOL_REGISTRY: Lazy<RwLock<HashMap<String, ArithmaExpression>>> =
     Lazy::new(|| RwLock::new(HashMap::new()));
 
 /// User-tunable enable flags. Maps symbol → `true|false`. Off-by-default
 /// constants are skipped during symbol resolution.
 #[derive(Debug, Clone, Default)]
-pub struct ArithmosConstantConfig {
+pub struct ArithmaConstantConfig {
     /// Per-symbol enable map.
     pub enabled_constants: HashMap<String, bool>,
     /// Default for unknown symbols.
     pub enable_all_by_default: bool,
 }
 
-/// Façade type re-exported as `arithmos_core::ArithmosConstants` — a static-only
+/// Façade type re-exported as `arithma_core::ArithmaConstants` — a static-only
 /// service for downstream code that prefers method calls over free functions.
-pub struct ArithmosConstants;
+pub struct ArithmaConstants;
 
-impl ArithmosConstants {
+impl ArithmaConstants {
     /// Look up a symbol in the registry. Equivalent to [`lookup_symbol`].
-    pub fn lookup(symbol: &str) -> Option<ArithmosExpression> {
+    pub fn lookup(symbol: &str) -> Option<ArithmaExpression> {
         lookup_symbol(symbol)
     }
 
     /// Register a symbol. Errors if the symbol is already present.
-    pub fn register(symbol: String, expr: ArithmosExpression) -> Result<(), String> {
+    pub fn register(symbol: String, expr: ArithmaExpression) -> Result<(), String> {
         register_symbol(symbol, expr)
     }
 
@@ -106,13 +106,13 @@ impl ArithmosConstants {
 }
 
 /// Look up a symbol in the global registry.
-pub fn lookup_symbol(symbol: &str) -> Option<ArithmosExpression> {
+pub fn lookup_symbol(symbol: &str) -> Option<ArithmaExpression> {
     SYMBOL_REGISTRY.read().get(symbol).cloned()
 }
 
 /// Register a symbol. Errors if the symbol is already present (use
 /// [`reregister_symbol`] for hot-reload paths that intentionally overwrite).
-pub fn register_symbol(symbol: String, expr: ArithmosExpression) -> Result<(), String> {
+pub fn register_symbol(symbol: String, expr: ArithmaExpression) -> Result<(), String> {
     let mut registry = SYMBOL_REGISTRY.write();
     if registry.contains_key(&symbol) {
         return Err(format!("Symbol '{symbol}' is already registered"));
@@ -122,7 +122,7 @@ pub fn register_symbol(symbol: String, expr: ArithmosExpression) -> Result<(), S
 }
 
 /// Replace an existing symbol or insert a fresh one. Used by hot-reload.
-pub fn reregister_symbol(symbol: String, expr: ArithmosExpression) {
+pub fn reregister_symbol(symbol: String, expr: ArithmaExpression) {
     SYMBOL_REGISTRY.write().insert(symbol, expr);
 }
 
@@ -159,15 +159,15 @@ fn strip_jsonc_header(jsonc: &str) -> String {
 
 /// Load constants from a JSON string into [`SYMBOL_REGISTRY`].
 ///
-/// The document is an array of [`ArithmosConstantDef`]. Entries with
+/// The document is an array of [`ArithmaConstantDef`]. Entries with
 /// `enabled: false` are skipped. Registration uses [`reregister_symbol`] so the
-/// call is idempotent — [`ArithmosConstants::initialize_defaults`] documents
+/// call is idempotent — [`ArithmaConstants::initialize_defaults`] documents
 /// itself as safe to call repeatedly, which a duplicate-key error would break.
 ///
 /// Returns the number of symbols registered.
 pub fn load_constants_from_json(json: &str) -> Result<usize, String> {
     let cleaned = strip_jsonc_header(json);
-    let defs: Vec<ArithmosConstantDef> = serde_json::from_str(&cleaned)
+    let defs: Vec<ArithmaConstantDef> = serde_json::from_str(&cleaned)
         .map_err(|e| format!("Failed to parse constants JSON: {e}"))?;
 
     let mut registered = 0_usize;
@@ -187,7 +187,7 @@ pub fn load_constants_from_json(json: &str) -> Result<usize, String> {
                 def.symbol
             ));
         }
-        let expr = ArithmosExpression::Constant {
+        let expr = ArithmaExpression::Constant {
             name: def.name.clone(),
             symbol: def.symbol.clone(),
             cached_value: def.cached_value,
@@ -200,6 +200,21 @@ pub fn load_constants_from_json(json: &str) -> Result<usize, String> {
     }
     Ok(registered)
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaConstantConfig`")]
+#[allow(unused)]
+pub use self::ArithmaConstantConfig as ArithmosConstantConfig;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaConstantDef`")]
+#[allow(unused)]
+pub use self::ArithmaConstantDef as ArithmosConstantDef;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaConstants`")]
+#[allow(unused)]
+pub use self::ArithmaConstants as ArithmosConstants;
 
 #[cfg(test)]
 mod tests {
@@ -226,14 +241,14 @@ mod tests {
         // The regression this guards: load_constants_from_json used to parse
         // the document and register nothing, leaving SYMBOL_REGISTRY empty so
         // every constant lookup returned None.
-        let n = ArithmosConstants::initialize_defaults().expect("defaults must load");
+        let n = ArithmaConstants::initialize_defaults().expect("defaults must load");
         assert!(n >= 30, "expected the full catalogue, registered {n}");
         assert!(registered_count() >= n);
     }
 
     #[test]
     fn pi_resolves_to_its_value() {
-        ArithmosConstants::initialize_defaults().expect("defaults must load");
+        ArithmaConstants::initialize_defaults().expect("defaults must load");
         let pi = lookup_symbol("\u{3c0}").expect("π must be registered");
         let v = pi.to_f64().expect("π must carry a cached value");
         assert!(
@@ -244,7 +259,7 @@ mod tests {
 
     #[test]
     fn e_and_phi_resolve() {
-        ArithmosConstants::initialize_defaults().expect("defaults must load");
+        ArithmaConstants::initialize_defaults().expect("defaults must load");
         let e = lookup_symbol("e").expect("e must be registered");
         assert!((e.to_f64().unwrap() - std::f64::consts::E).abs() < 1e-12);
         // φ carries use_expression: true but still ships a cached value.
@@ -254,8 +269,8 @@ mod tests {
 
     #[test]
     fn initialize_defaults_is_idempotent() {
-        let first = ArithmosConstants::initialize_defaults().expect("first load");
-        let second = ArithmosConstants::initialize_defaults().expect("second load");
+        let first = ArithmaConstants::initialize_defaults().expect("first load");
+        let second = ArithmaConstants::initialize_defaults().expect("second load");
         assert_eq!(
             first, second,
             "reloading must not error or change the count"

@@ -11,29 +11,38 @@
 //!
 //! Infinite plane defined by a normal vector and a scalar offset (`n · p = d`).
 
-use crate::expression::ArithmosExpression;
-use crate::geometry::vector::ArithmosVector;
+use crate::expression::ArithmaExpression;
+use crate::geometry::vector::ArithmaVector;
 
 /// Plane in normal-and-offset form: `normal · p = offset`.
 #[derive(Debug, Clone)]
-pub struct ArithmosPlane {
+pub struct ArithmaPlane {
     /// Plane normal (need not be unit-length).
-    pub normal: ArithmosVector,
+    pub normal: ArithmaVector,
     /// Scalar offset along the normal.
-    pub offset: ArithmosExpression,
+    pub offset: ArithmaExpression,
 }
 
-impl ArithmosPlane {
+impl ArithmaPlane {
     /// Construct a plane from normal and offset.
-    pub fn new(normal: ArithmosVector, offset: ArithmosExpression) -> Self {
+    pub fn new(normal: ArithmaVector, offset: ArithmaExpression) -> Self {
         Self { normal, offset }
     }
 
     /// Signed distance from `point` to this plane. Wave-2 stub.
-    pub fn signed_distance(&self, _point: &ArithmosVector) -> ArithmosExpression {
-        unimplemented!("ArithmosPlane::signed_distance — populated in Wave 3")
+    pub fn signed_distance(&self, _point: &ArithmaVector) -> ArithmaExpression {
+        unimplemented!("ArithmaPlane::signed_distance — populated in Wave 3")
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaPlane`")]
+#[allow(unused)]
+pub use self::ArithmaPlane as ArithmosPlane;
 
 #[cfg(test)]
 mod tests {
@@ -41,7 +50,7 @@ mod tests {
 
     #[test]
     fn construct_plane() {
-        let p = ArithmosPlane::new(ArithmosVector::zero(), ArithmosExpression::zero());
+        let p = ArithmaPlane::new(ArithmaVector::zero(), ArithmaExpression::zero());
         let _ = p.normal;
     }
 }

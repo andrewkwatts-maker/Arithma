@@ -9,7 +9,7 @@
 
 //! # Differentiation
 //!
-//! Symbolic differentiation of `ArithmosExpression`. Implements the standard
+//! Symbolic differentiation of `ArithmaExpression`. Implements the standard
 //! rules — sum, difference, product, quotient, chain, and the derivatives of
 //! the elementary transcendental functions.
 //!
@@ -20,18 +20,18 @@
 //! API is preserved for source-compatibility with the legacy pt-arithmos
 //! call-sites; the iterative module owns the actual traversal.
 
-use crate::expression::ArithmosExpression;
-use crate::function::ArithmosFunction;
+use crate::expression::ArithmaExpression;
+use crate::function::ArithmaFunction;
 
 /// Differentiate `expr` with respect to `var`. Returns the symbolic derivative.
 ///
 /// Implementation note: routes to the iterative differentiator to honour
 /// CLAUDE.md safety rule 1 (avoid recursion).
-pub fn differentiate(expr: &ArithmosExpression, var: &str) -> Result<ArithmosExpression, String> {
+pub fn differentiate(expr: &ArithmaExpression, var: &str) -> Result<ArithmaExpression, String> {
     debug_assert!(!var.is_empty(), "differentiate: empty variable name");
     let out = crate::calculus::differentiation_iterative::differentiate_iterative(expr, var)?;
     debug_assert!(
-        matches!(out, ArithmosExpression::Number(_) | _),
+        matches!(out, ArithmaExpression::Number(_) | _),
         "non-expression result"
     );
     Ok(out)
@@ -41,25 +41,21 @@ pub fn differentiate(expr: &ArithmosExpression, var: &str) -> Result<ArithmosExp
 ///
 /// Convenience that wraps `differentiate` on each operand and assembles a
 /// `Function::Add` from the parts.
-pub fn diff_sum(a: &ArithmosExpression, b: &ArithmosExpression, var: &str) -> ArithmosExpression {
+pub fn diff_sum(a: &ArithmaExpression, b: &ArithmaExpression, var: &str) -> ArithmaExpression {
     debug_assert!(!var.is_empty(), "diff_sum: empty variable name");
-    let da = differentiate(a, var).unwrap_or_else(|_| ArithmosExpression::zero());
-    let db = differentiate(b, var).unwrap_or_else(|_| ArithmosExpression::zero());
-    ArithmosExpression::add(da, db)
+    let da = differentiate(a, var).unwrap_or_else(|_| ArithmaExpression::zero());
+    let db = differentiate(b, var).unwrap_or_else(|_| ArithmaExpression::zero());
+    ArithmaExpression::add(da, db)
 }
 
 /// Helper: differentiate a product `a * b`. Returns `da*b + a*db`.
-pub fn diff_product(
-    a: &ArithmosExpression,
-    b: &ArithmosExpression,
-    var: &str,
-) -> ArithmosExpression {
+pub fn diff_product(a: &ArithmaExpression, b: &ArithmaExpression, var: &str) -> ArithmaExpression {
     debug_assert!(!var.is_empty(), "diff_product: empty variable name");
-    let da = differentiate(a, var).unwrap_or_else(|_| ArithmosExpression::zero());
-    let db = differentiate(b, var).unwrap_or_else(|_| ArithmosExpression::zero());
-    let left = ArithmosExpression::mul(da, b.clone());
-    let right = ArithmosExpression::mul(a.clone(), db);
-    ArithmosExpression::add(left, right)
+    let da = differentiate(a, var).unwrap_or_else(|_| ArithmaExpression::zero());
+    let db = differentiate(b, var).unwrap_or_else(|_| ArithmaExpression::zero());
+    let left = ArithmaExpression::mul(da, b.clone());
+    let right = ArithmaExpression::mul(a.clone(), db);
+    ArithmaExpression::add(left, right)
 }
 
 /// Helper: chain rule application — `df/dg * dg/dx`.
@@ -69,34 +65,34 @@ pub fn diff_product(
 /// callers assembling derivatives by hand. We build the chain by wrapping
 /// `outer` around `inner`, then differentiating the result.
 pub fn diff_chain(
-    outer: &ArithmosExpression,
-    inner: &ArithmosExpression,
+    outer: &ArithmaExpression,
+    inner: &ArithmaExpression,
     var: &str,
-) -> ArithmosExpression {
+) -> ArithmaExpression {
     debug_assert!(!var.is_empty(), "diff_chain: empty variable name");
     // The outer is expected to be a unary function (Sin, Cos, Exp, ...). We
     // substitute by rebuilding it around `inner` so the iterative pass can
     // handle the chain in a single pass.
     let rebuilt = match outer {
-        ArithmosExpression::Function(func, _) => match func {
-            ArithmosFunction::Sin => ArithmosExpression::sin(inner.clone()),
-            ArithmosFunction::Cos => ArithmosExpression::cos(inner.clone()),
-            ArithmosFunction::Tan => ArithmosExpression::tan(inner.clone()),
-            ArithmosFunction::Exp => ArithmosExpression::exp(inner.clone()),
-            ArithmosFunction::Ln => ArithmosExpression::ln(inner.clone()),
-            ArithmosFunction::Sqrt => ArithmosExpression::sqrt(inner.clone()),
-            ArithmosFunction::Negate => ArithmosExpression::neg(inner.clone()),
-            _ => return ArithmosExpression::zero(),
+        ArithmaExpression::Function(func, _) => match func {
+            ArithmaFunction::Sin => ArithmaExpression::sin(inner.clone()),
+            ArithmaFunction::Cos => ArithmaExpression::cos(inner.clone()),
+            ArithmaFunction::Tan => ArithmaExpression::tan(inner.clone()),
+            ArithmaFunction::Exp => ArithmaExpression::exp(inner.clone()),
+            ArithmaFunction::Ln => ArithmaExpression::ln(inner.clone()),
+            ArithmaFunction::Sqrt => ArithmaExpression::sqrt(inner.clone()),
+            ArithmaFunction::Negate => ArithmaExpression::neg(inner.clone()),
+            _ => return ArithmaExpression::zero(),
         },
-        _ => return ArithmosExpression::zero(),
+        _ => return ArithmaExpression::zero(),
     };
-    differentiate(&rebuilt, var).unwrap_or_else(|_| ArithmosExpression::zero())
+    differentiate(&rebuilt, var).unwrap_or_else(|_| ArithmaExpression::zero())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::expression::{ArithmosBindings, Evaluable};
+    use crate::expression::{ArithmaBindings, Evaluable};
 
     #[test]
     fn module_compiles() {
@@ -107,13 +103,10 @@ mod tests {
     #[test]
     fn diff_sum_evaluates() {
         // d/dx (x + x^2) = 1 + 2x, at x = 4 → 9.
-        let a = ArithmosExpression::var("x");
-        let b = ArithmosExpression::pow(
-            ArithmosExpression::var("x"),
-            ArithmosExpression::from_i64(2),
-        );
+        let a = ArithmaExpression::var("x");
+        let b = ArithmaExpression::pow(ArithmaExpression::var("x"), ArithmaExpression::from_i64(2));
         let d = diff_sum(&a, &b, "x");
-        let mut bindings = ArithmosBindings::new();
+        let mut bindings = ArithmaBindings::new();
         bindings.insert("x".to_string(), 4.0);
         let v = d.evaluate(&bindings).unwrap();
         assert!((v - 9.0).abs() < 1e-9, "got {v}");
@@ -122,10 +115,10 @@ mod tests {
     #[test]
     fn diff_product_evaluates_product_rule() {
         // d/dx (x * x) = 1*x + x*1 = 2x, at x = 5 → 10.
-        let a = ArithmosExpression::var("x");
-        let b = ArithmosExpression::var("x");
+        let a = ArithmaExpression::var("x");
+        let b = ArithmaExpression::var("x");
         let d = diff_product(&a, &b, "x");
-        let mut bindings = ArithmosBindings::new();
+        let mut bindings = ArithmaBindings::new();
         bindings.insert("x".to_string(), 5.0);
         let v = d.evaluate(&bindings).unwrap();
         assert!((v - 10.0).abs() < 1e-9, "got {v}");
@@ -134,9 +127,9 @@ mod tests {
     #[test]
     fn differentiate_routes_to_iterative() {
         // Smoke: differentiate(var) -> 1.
-        let e = ArithmosExpression::var("y");
+        let e = ArithmaExpression::var("y");
         let d = differentiate(&e, "y").unwrap();
-        let v = d.evaluate(&ArithmosBindings::new()).unwrap();
+        let v = d.evaluate(&ArithmaBindings::new()).unwrap();
         assert!((v - 1.0).abs() < 1e-12);
     }
 }

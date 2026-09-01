@@ -12,29 +12,38 @@
 //! Moments of distributions and samples — variance, skewness, kurtosis.
 
 /// Static helper for moment calculations on f64 datasets.
-pub struct ArithmosStatisticalMoment;
+pub struct ArithmaStatisticalMoment;
 
-impl ArithmosStatisticalMoment {
+impl ArithmaStatisticalMoment {
     /// Sample mean.
     pub fn mean(_data: &[f64]) -> Result<f64, String> {
-        unimplemented!("ArithmosStatisticalMoment::mean — populated in Wave 3")
+        unimplemented!("ArithmaStatisticalMoment::mean — populated in Wave 3")
     }
 
     /// Sample variance (Bessel-corrected).
     pub fn variance(_data: &[f64]) -> Result<f64, String> {
-        unimplemented!("ArithmosStatisticalMoment::variance — populated in Wave 3")
+        unimplemented!("ArithmaStatisticalMoment::variance — populated in Wave 3")
     }
 
     /// Sample skewness (third standardised moment).
     pub fn skewness(_data: &[f64]) -> Result<f64, String> {
-        unimplemented!("ArithmosStatisticalMoment::skewness — populated in Wave 3")
+        unimplemented!("ArithmaStatisticalMoment::skewness — populated in Wave 3")
     }
 
     /// Sample kurtosis (fourth standardised moment, excess form).
     pub fn kurtosis(_data: &[f64]) -> Result<f64, String> {
-        unimplemented!("ArithmosStatisticalMoment::kurtosis — populated in Wave 3")
+        unimplemented!("ArithmaStatisticalMoment::kurtosis — populated in Wave 3")
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaStatisticalMoment`")]
+#[allow(unused)]
+pub use self::ArithmaStatisticalMoment as ArithmosStatisticalMoment;
 
 #[cfg(test)]
 mod tests {

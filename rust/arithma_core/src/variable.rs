@@ -9,24 +9,24 @@
 
 //! # Variable
 //!
-//! `ArithmosVariable` — a named symbol with optional bound value, optional unit,
+//! `ArithmaVariable` — a named symbol with optional bound value, optional unit,
 //! and optional documentation. Variables are resolved through the global
 //! constants registry by [`crate::constants::lookup_symbol`].
 
 use serde::{Deserialize, Serialize};
 
-use crate::expression::ArithmosExpression;
+use crate::expression::ArithmaExpression;
 
 /// The runtime value attached to a variable. Either a numeric literal or a
 /// symbolic expression — the second form is what enables `x = 2π` style
 /// derived variables that retain symbolic structure for further simplification.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub enum ArithmosVariableValue {
+pub enum ArithmaVariableValue {
     /// Bound to a literal f64. Used for fast numeric evaluation paths.
     Float(f64),
     /// Bound to a symbolic expression. The expression is evaluated lazily
     /// each time the variable is referenced so simplification can flow through.
-    Symbolic(Box<ArithmosExpression>),
+    Symbolic(Box<ArithmaExpression>),
     /// Unbound — referencing the variable in an evaluator returns
     /// `Err("unbound variable")`.
     #[default]
@@ -35,11 +35,11 @@ pub enum ArithmosVariableValue {
 
 /// A named variable with an optional bound value and optional unit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ArithmosVariable {
+pub struct ArithmaVariable {
     /// Variable name (the textual symbol used in expressions).
     pub name: String,
     /// Current binding.
-    pub value: ArithmosVariableValue,
+    pub value: ArithmaVariableValue,
     /// Optional unit string (e.g. "m/s").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unit: Option<String>,
@@ -48,12 +48,12 @@ pub struct ArithmosVariable {
     pub description: Option<String>,
 }
 
-impl ArithmosVariable {
+impl ArithmaVariable {
     /// Create a new unbound variable with just a name.
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            value: ArithmosVariableValue::Unbound,
+            value: ArithmaVariableValue::Unbound,
             unit: None,
             description: None,
         }
@@ -61,13 +61,13 @@ impl ArithmosVariable {
 
     /// Bind the variable to an f64.
     pub fn with_float(mut self, value: f64) -> Self {
-        self.value = ArithmosVariableValue::Float(value);
+        self.value = ArithmaVariableValue::Float(value);
         self
     }
 
     /// Bind the variable to a symbolic expression.
-    pub fn with_symbolic(mut self, expr: ArithmosExpression) -> Self {
-        self.value = ArithmosVariableValue::Symbolic(Box::new(expr));
+    pub fn with_symbolic(mut self, expr: ArithmaExpression) -> Self {
+        self.value = ArithmaVariableValue::Symbolic(Box::new(expr));
         self
     }
 
@@ -85,9 +85,21 @@ impl ArithmosVariable {
 
     /// Return whether the variable is unbound.
     pub fn is_unbound(&self) -> bool {
-        matches!(self.value, ArithmosVariableValue::Unbound)
+        matches!(self.value, ArithmaVariableValue::Unbound)
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaVariable`")]
+#[allow(unused)]
+pub use self::ArithmaVariable as ArithmosVariable;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaVariableValue`")]
+#[allow(unused)]
+pub use self::ArithmaVariableValue as ArithmosVariableValue;
 
 #[cfg(test)]
 mod tests {
@@ -95,21 +107,21 @@ mod tests {
 
     #[test]
     fn new_variable_is_unbound() {
-        let v = ArithmosVariable::new("x");
+        let v = ArithmaVariable::new("x");
         assert_eq!(v.name, "x");
         assert!(v.is_unbound());
     }
 
     #[test]
     fn with_float_binds() {
-        let v = ArithmosVariable::new("g").with_float(9.81);
+        let v = ArithmaVariable::new("g").with_float(9.81);
         assert!(!v.is_unbound());
-        assert!(matches!(v.value, ArithmosVariableValue::Float(_)));
+        assert!(matches!(v.value, ArithmaVariableValue::Float(_)));
     }
 
     #[test]
     fn unit_round_trip() {
-        let v = ArithmosVariable::new("v").with_unit("m/s");
+        let v = ArithmaVariable::new("v").with_unit("m/s");
         assert_eq!(v.unit.as_deref(), Some("m/s"));
     }
 }

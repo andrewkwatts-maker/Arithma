@@ -11,27 +11,36 @@
 //!
 //! Sphere defined by symbolic centre and radius.
 
-use crate::expression::ArithmosExpression;
-use crate::geometry::vector::ArithmosVector;
+use crate::expression::ArithmaExpression;
+use crate::geometry::vector::ArithmaVector;
 
 /// Sphere: `|p - centre| = radius`.
 #[derive(Debug, Clone)]
-pub struct ArithmosSphere {
-    pub centre: ArithmosVector,
-    pub radius: ArithmosExpression,
+pub struct ArithmaSphere {
+    pub centre: ArithmaVector,
+    pub radius: ArithmaExpression,
 }
 
-impl ArithmosSphere {
+impl ArithmaSphere {
     /// Construct a sphere.
-    pub fn new(centre: ArithmosVector, radius: ArithmosExpression) -> Self {
+    pub fn new(centre: ArithmaVector, radius: ArithmaExpression) -> Self {
         Self { centre, radius }
     }
 
     /// Returns the squared radius `radius * radius`.
-    pub fn radius_squared(&self) -> ArithmosExpression {
-        ArithmosExpression::mul(self.radius.clone(), self.radius.clone())
+    pub fn radius_squared(&self) -> ArithmaExpression {
+        ArithmaExpression::mul(self.radius.clone(), self.radius.clone())
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaSphere`")]
+#[allow(unused)]
+pub use self::ArithmaSphere as ArithmosSphere;
 
 #[cfg(test)]
 mod tests {
@@ -39,7 +48,7 @@ mod tests {
 
     #[test]
     fn unit_sphere_construction() {
-        let s = ArithmosSphere::new(ArithmosVector::zero(), ArithmosExpression::zero());
+        let s = ArithmaSphere::new(ArithmaVector::zero(), ArithmaExpression::zero());
         let _ = s.centre;
     }
 }

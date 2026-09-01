@@ -9,20 +9,29 @@
 
 //! # Statistical sampler
 //!
-//! Generic sampling driver — feeds any [`ArithmosDistribution`] through
+//! Generic sampling driver — feeds any [`ArithmaDistribution`] through
 //! inverse-CDF or rejection sampling.
 
-use crate::probabilities::ArithmosDistribution;
+use crate::probabilities::ArithmaDistribution;
 
 /// Static sampler.
-pub struct ArithmosStatisticalSampler;
+pub struct ArithmaStatisticalSampler;
 
-impl ArithmosStatisticalSampler {
+impl ArithmaStatisticalSampler {
     /// Draw `n` samples from the supplied distribution. Wave-2 stub.
-    pub fn sample(_dist: &dyn ArithmosDistribution, _n: usize) -> Result<Vec<f64>, String> {
-        unimplemented!("ArithmosStatisticalSampler::sample — populated in Wave 3")
+    pub fn sample(_dist: &dyn ArithmaDistribution, _n: usize) -> Result<Vec<f64>, String> {
+        unimplemented!("ArithmaStatisticalSampler::sample — populated in Wave 3")
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaStatisticalSampler`")]
+#[allow(unused)]
+pub use self::ArithmaStatisticalSampler as ArithmosStatisticalSampler;
 
 #[cfg(test)]
 mod tests {

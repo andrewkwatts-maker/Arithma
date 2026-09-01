@@ -9,7 +9,7 @@
 
 //! Fallback dispatch system.
 //!
-//! When a primary backend (Arithmos, EML, an external Python/C++ executor)
+//! When a primary backend (Arithma, EML, an external Python/C++ executor)
 //! cannot evaluate an expression, the fallback chain decides what to do:
 //! try a different backend, drop to numeric f64, return the expression
 //! unchanged, or surface an error.
@@ -20,17 +20,17 @@
 //! `pt_fallback_system.rs::PTFallbackFunction` and
 //! `PTFallbackStats` (Wave 3 follow-up, plan §F.8 step 2). The
 //! `PTFallbackRegistry` orchestrator stays in pt-arithmos until
-//! `ArithmosExternalFunctionRegistry` can host it directly — its concrete
+//! `ArithmaExternalFunctionRegistry` can host it directly — its concrete
 //! shape depends on the engine's symbol-resolver chain that pt-arithmos
 //! still owns.
 
-use crate::expression::ArithmosExpression;
+use crate::expression::ArithmaExpression;
 
 // ─── Strategy enum ─────────────────────────────────────────────────────────
 
 /// Strategy used when a backend fails or refuses an expression.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum ArithmosFallbackStrategy {
+pub enum ArithmaFallbackStrategy {
     /// Drop to numeric f64 if all leaves can be evaluated to f64.
     Numeric,
     /// Return the expression unchanged.
@@ -43,9 +43,9 @@ pub enum ArithmosFallbackStrategy {
 /// Try the next strategy in a chain. Wave-2 stub: returns the strategy
 /// unchanged. Wave 3 wires up the actual chain (Numeric → Symbolic → Error).
 pub fn try_fallback(
-    _expr: &ArithmosExpression,
-    strategy: ArithmosFallbackStrategy,
-) -> ArithmosFallbackStrategy {
+    _expr: &ArithmaExpression,
+    strategy: ArithmaFallbackStrategy,
+) -> ArithmaFallbackStrategy {
     strategy
 }
 
@@ -57,9 +57,9 @@ pub fn try_fallback(
 /// stays here so multiple registries can share a uniform contract.
 ///
 /// Generic over the expression type so downstream consumers can plug in
-/// `ArithmosExpression`, pt-arithmos `PTExpression`, eml-math `EMLPoint`,
+/// `ArithmaExpression`, pt-arithmos `PTExpression`, eml-math `EMLPoint`,
 /// or any other carrier without committing to one in the foundation.
-pub trait ArithmosFallbackFunction<Expr> {
+pub trait ArithmaFallbackFunction<Expr> {
     /// Stable function identifier (e.g. `"sin"`, `"erf"`, `"my_lib::foo"`).
     fn function_id(&self) -> &str;
 
@@ -87,7 +87,7 @@ pub trait ArithmosFallbackFunction<Expr> {
 /// Telemetry for a single registered function. The registry surfaces
 /// these for debug dashboards and adaptive routing decisions.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct ArithmosFallbackStats {
+pub struct ArithmaFallbackStats {
     /// External-backend invocations attempted.
     pub external_calls: u64,
     /// External invocations that returned a value (no error).
@@ -99,7 +99,7 @@ pub struct ArithmosFallbackStats {
     pub total_calls: u64,
 }
 
-impl ArithmosFallbackStats {
+impl ArithmaFallbackStats {
     /// Record a successful external invocation.
     pub fn record_external_success(&mut self) {
         self.total_calls = self.total_calls.saturating_add(1);
@@ -137,6 +137,21 @@ impl ArithmosFallbackStats {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaFallbackFunction`")]
+#[allow(unused)]
+pub use self::ArithmaFallbackFunction as ArithmosFallbackFunction;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaFallbackStats`")]
+#[allow(unused)]
+pub use self::ArithmaFallbackStats as ArithmosFallbackStats;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaFallbackStrategy`")]
+#[allow(unused)]
+pub use self::ArithmaFallbackStrategy as ArithmosFallbackStrategy;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,8 +161,8 @@ mod tests {
     #[test]
     fn default_strategy_is_symbolic() {
         assert_eq!(
-            ArithmosFallbackStrategy::default(),
-            ArithmosFallbackStrategy::Symbolic
+            ArithmaFallbackStrategy::default(),
+            ArithmaFallbackStrategy::Symbolic
         );
     }
 
@@ -155,7 +170,7 @@ mod tests {
 
     #[test]
     fn stats_default_is_zero() {
-        let s = ArithmosFallbackStats::default();
+        let s = ArithmaFallbackStats::default();
         assert_eq!(s.total_calls, 0);
         assert_eq!(s.external_calls, 0);
         assert_eq!(s.external_successes, 0);
@@ -165,7 +180,7 @@ mod tests {
 
     #[test]
     fn stats_record_external_success() {
-        let mut s = ArithmosFallbackStats::default();
+        let mut s = ArithmaFallbackStats::default();
         s.record_external_success();
         s.record_external_success();
         assert_eq!(s.total_calls, 2);
@@ -177,7 +192,7 @@ mod tests {
 
     #[test]
     fn stats_record_external_failure_then_fallback() {
-        let mut s = ArithmosFallbackStats::default();
+        let mut s = ArithmaFallbackStats::default();
         s.record_external_success();
         s.record_external_failure_then_fallback();
         assert_eq!(s.total_calls, 2);
@@ -189,7 +204,7 @@ mod tests {
 
     #[test]
     fn stats_record_fallback_only() {
-        let mut s = ArithmosFallbackStats::default();
+        let mut s = ArithmaFallbackStats::default();
         s.record_fallback_only();
         assert_eq!(s.total_calls, 1);
         assert_eq!(s.external_calls, 0);
@@ -199,7 +214,7 @@ mod tests {
 
     #[test]
     fn stats_saturating_add_does_not_overflow() {
-        let mut s = ArithmosFallbackStats {
+        let mut s = ArithmaFallbackStats {
             total_calls: u64::MAX,
             external_calls: u64::MAX,
             external_successes: u64::MAX,
@@ -214,11 +229,11 @@ mod tests {
 
     #[test]
     fn stats_reset_zeros_everything() {
-        let mut s = ArithmosFallbackStats::default();
+        let mut s = ArithmaFallbackStats::default();
         s.record_external_success();
         s.record_fallback_only();
         s.reset();
-        assert_eq!(s, ArithmosFallbackStats::default());
+        assert_eq!(s, ArithmaFallbackStats::default());
     }
 
     // ─── trait — stub impl ─────────────────────────────────────────────────
@@ -226,7 +241,7 @@ mod tests {
     /// Pretend "sin" function — sums all f64 args (intentionally trivial)
     /// to exercise the trait surface.
     struct StubSin;
-    impl ArithmosFallbackFunction<f64> for StubSin {
+    impl ArithmaFallbackFunction<f64> for StubSin {
         fn function_id(&self) -> &str {
             "stub_sin"
         }

@@ -10,15 +10,15 @@
 //! # Geometry
 //!
 //! 3D vector / line / plane / sphere primitives plus intersection routines.
-//! Coordinates are stored as `ArithmosExpression` so geometry can carry
+//! Coordinates are stored as `ArithmaExpression` so geometry can carry
 //! symbolic data through the simplifier and Fourier-bake pipeline.
 //!
 //! ## Submodules
 //!
-//! - [`vector`] — `ArithmosVector` 3-vector.
-//! - [`line`] — `ArithmosLine` parametric line.
-//! - [`plane`] — `ArithmosPlane` infinite plane.
-//! - [`sphere`] — `ArithmosSphere` sphere.
+//! - [`vector`] — `ArithmaVector` 3-vector.
+//! - [`line`] — `ArithmaLine` parametric line.
+//! - [`plane`] — `ArithmaPlane` infinite plane.
+//! - [`sphere`] — `ArithmaSphere` sphere.
 //! - [`intersection`] — closed-form intersection routines.
 
 pub mod intersection;
@@ -27,11 +27,11 @@ pub mod plane;
 pub mod sphere;
 pub mod vector;
 
-pub use intersection::{ArithmosIntersection, ArithmosIntersectionResult};
-pub use line::ArithmosLine;
-pub use plane::ArithmosPlane;
-pub use sphere::ArithmosSphere;
-pub use vector::ArithmosVector;
+pub use intersection::{ArithmaIntersection, ArithmaIntersectionResult};
+pub use line::ArithmaLine;
+pub use plane::ArithmaPlane;
+pub use sphere::ArithmaSphere;
+pub use vector::ArithmaVector;
 
 #[cfg(test)]
 mod tests {
@@ -39,9 +39,9 @@ mod tests {
 
     #[test]
     fn geometry_re_exports_resolve() {
-        let _: Option<ArithmosVector> = None;
-        let _: Option<ArithmosLine> = None;
-        let _: Option<ArithmosPlane> = None;
-        let _: Option<ArithmosSphere> = None;
+        let _: Option<ArithmaVector> = None;
+        let _: Option<ArithmaLine> = None;
+        let _: Option<ArithmaPlane> = None;
+        let _: Option<ArithmaSphere> = None;
     }
 }

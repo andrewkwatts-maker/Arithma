@@ -11,11 +11,11 @@
 //!
 //! ## Migration note
 //!
-//! The [`ArithmosLosslessArithmetic`] trait is migrated from pt-arithmos
+//! The [`ArithmaLosslessArithmetic`] trait is migrated from pt-arithmos
 //! `pt_internal_arithmetic.rs::PTLosslessArithmetic` (Wave 3 follow-up,
 //! plan §F.8 step 3 "integer/variable"). The trait shape is the
 //! contract — pt-arithmos `PTInteger` continues to implement the legacy
-//! trait until `ArithmosInteger` graduates from stub status, at which
+//! trait until `ArithmaInteger` graduates from stub status, at which
 //! point the impl moves here too.
 
 // ─── Free-function helpers ─────────────────────────────────────────────────
@@ -70,8 +70,8 @@ pub fn can_multiply_i64(a: i64, b: i64) -> bool {
 ///
 /// Migrated from pt-arithmos `PTLosslessArithmetic`. The shape is the
 /// migration contract — every existing call site continues to work
-/// unchanged once `ArithmosInteger` adopts this trait.
-pub trait ArithmosLosslessArithmetic: Sized {
+/// unchanged once `ArithmaInteger` adopts this trait.
+pub trait ArithmaLosslessArithmetic: Sized {
     /// `true` iff `self + other` can be performed without loss.
     fn can_add_lossless(&self, other: &Self) -> bool;
 
@@ -107,7 +107,7 @@ pub trait ArithmosLosslessArithmetic: Sized {
 
 // ─── Blanket impl for i64 ──────────────────────────────────────────────────
 
-impl ArithmosLosslessArithmetic for i64 {
+impl ArithmaLosslessArithmetic for i64 {
     fn can_add_lossless(&self, other: &i64) -> bool {
         can_add_i64(*self, *other)
     }
@@ -136,6 +136,15 @@ impl ArithmosLosslessArithmetic for i64 {
         checked_div_exact_i64(*self, *other)
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaLosslessArithmetic`")]
+#[allow(unused)]
+pub use self::ArithmaLosslessArithmetic as ArithmosLosslessArithmetic;
 
 #[cfg(test)]
 mod tests {

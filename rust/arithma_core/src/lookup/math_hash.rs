@@ -28,7 +28,7 @@
 //!
 //! The fast-path simplifier functions (`fast_algebra::*`, `fast_integrals::*`,
 //! …) that returned `PTExpression` results stay in pt-arithmos for now;
-//! they migrate here once `ArithmosExpression` graduates from stub.
+//! they migrate here once `ArithmaExpression` graduates from stub.
 
 // ─── Algebraic simplifications (2000-series) ───────────────────────────────
 
@@ -170,7 +170,7 @@ pub fn classify(id: u32) -> Option<MathIdKind> {
 
 /// Look up an exact symbolic form for `exp(x)` if `x` matches a known
 /// special value. Returns `None` otherwise. Wave-2 returns the f64 value;
-/// Wave-3 will return an `ArithmosExpression` once that AST graduates.
+/// Wave-3 will return an `ArithmaExpression` once that AST graduates.
 pub fn lookup_exp(x: f64) -> Option<f64> {
     // NaN falls through to None along with every other unrecognised input —
     // it needs no branch of its own (an equality test against NaN is false).

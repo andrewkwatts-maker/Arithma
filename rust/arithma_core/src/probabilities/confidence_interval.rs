@@ -13,14 +13,14 @@
 
 /// Confidence interval `[lower, upper]` at a given confidence level.
 #[derive(Debug, Clone, Copy)]
-pub struct ArithmosConfidenceInterval {
+pub struct ArithmaConfidenceInterval {
     pub lower: f64,
     pub upper: f64,
     /// Confidence level in (0, 1).
     pub level: f64,
 }
 
-impl ArithmosConfidenceInterval {
+impl ArithmaConfidenceInterval {
     /// Construct a fresh interval.
     pub fn new(lower: f64, upper: f64, level: f64) -> Self {
         Self {
@@ -36,13 +36,22 @@ impl ArithmosConfidenceInterval {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaConfidenceInterval`")]
+#[allow(unused)]
+pub use self::ArithmaConfidenceInterval as ArithmosConfidenceInterval;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn width_is_correct() {
-        let ci = ArithmosConfidenceInterval::new(0.0, 1.0, 0.95);
+        let ci = ArithmaConfidenceInterval::new(0.0, 1.0, 0.95);
         assert!((ci.width() - 1.0).abs() < f64::EPSILON);
     }
 }

@@ -9,18 +9,18 @@
 
 //! # Expression
 //!
-//! `ArithmosExpression` is the abstract syntax tree at the heart of Arithmos. Every
+//! `ArithmaExpression` is the abstract syntax tree at the heart of Arithma. Every
 //! other module in the crate either produces, consumes, or transforms expressions.
 //!
 //! ## Variants (mirrors `pt_arithmos::PTExpression` post-rename)
 //!
-//! - `Number(ArithmosInteger)` — an exact integer literal (also represents
+//! - `Number(ArithmaInteger)` — an exact integer literal (also represents
 //!   rationals via `Function::Divide` of two numbers and special values such as
 //!   NaN / infinity through internal flags).
 //! - `Constant { … }` — a named symbolic constant (π, e, c, h, …) with an
 //!   optional cached f64, optional unit and optional SI prefix.
 //! - `Variable(String)` — a free symbol bound at evaluation time.
-//! - `Function(ArithmosFunction, Vec<…>)` — the catch-all node for both binary /
+//! - `Function(ArithmaFunction, Vec<…>)` — the catch-all node for both binary /
 //!   unary operators (Add, Sub, Mul, Div, Pow, Neg, Inv, Sqrt) and transcendental
 //!   functions (Exp, Ln, Sin, Cos, Tan, Asin, Acos, Atan, Sinh, Cosh, Tanh, …).
 //! - `Sum`, `Product`, `Limit` — bounded ranges and limits (ranges).
@@ -30,7 +30,7 @@
 //!
 //! ## Core traits
 //!
-//! Four traits expose Arithmos's behaviour polymorphically so downstream code can
+//! Four traits expose Arithma's behaviour polymorphically so downstream code can
 //! be written against abstractions instead of the AST directly:
 //!
 //! - [`Simplify`] — pure simplification. Drives both the compile-time and the
@@ -52,8 +52,8 @@ pub mod simplify;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::function::ArithmosFunction;
-use crate::integer::ArithmosInteger;
+use crate::function::ArithmaFunction;
+use crate::integer::ArithmaInteger;
 
 /// SI unit prefixes spanning yocto (10⁻²⁴) through yotta (10²⁴).
 ///
@@ -62,7 +62,7 @@ use crate::integer::ArithmosInteger;
 /// separately from the value to preserve symbolic intent (`5 km` is distinct
 /// from `5000 m` in the output even though they evaluate identically).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ArithmosSIPrefix {
+pub enum ArithmaSIPrefix {
     Yotta,
     Zetta,
     Exa,
@@ -86,7 +86,7 @@ pub enum ArithmosSIPrefix {
     Yocto,
 }
 
-impl ArithmosSIPrefix {
+impl ArithmaSIPrefix {
     /// Decimal multiplier for this prefix.
     pub fn multiplier(&self) -> f64 {
         match self {
@@ -142,15 +142,15 @@ impl ArithmosSIPrefix {
     }
 }
 
-/// The Arithmos symbolic expression AST.
+/// The Arithma symbolic expression AST.
 ///
 /// Variants match `pt_arithmos::PTExpression` so the migration in Wave 3 is a
-/// near-direct port. `Box<ArithmosExpression>` is used for child nodes so the
+/// near-direct port. `Box<ArithmaExpression>` is used for child nodes so the
 /// enum stays Sized.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ArithmosExpression {
+pub enum ArithmaExpression {
     /// Exact integer or rational literal.
-    Number(ArithmosInteger),
+    Number(ArithmaInteger),
 
     /// Named symbolic constant (π, e, c, h, ...).
     Constant {
@@ -170,26 +170,26 @@ pub enum ArithmosExpression {
     /// A free variable referenced by name.
     Variable(String),
 
-    /// Application of `ArithmosFunction` to its arguments. Covers binary ops
+    /// Application of `ArithmaFunction` to its arguments. Covers binary ops
     /// (Add/Sub/Mul/Div/Pow), unary ops (Neg, Sqrt), transcendentals (Sin, Cos,
     /// Exp, Ln, ...), inverse / hyperbolic trig and the entire calculus
-    /// operator family. See [`ArithmosFunction`] for the full list.
-    Function(ArithmosFunction, Vec<ArithmosExpression>),
+    /// operator family. See [`ArithmaFunction`] for the full list.
+    Function(ArithmaFunction, Vec<ArithmaExpression>),
 
     /// Bounded summation Î£_{var = start..end} expression.
     Sum {
         variable: String,
-        start: Box<ArithmosExpression>,
-        end: Box<ArithmosExpression>,
-        expression: Box<ArithmosExpression>,
+        start: Box<ArithmaExpression>,
+        end: Box<ArithmaExpression>,
+        expression: Box<ArithmaExpression>,
     },
 
     /// Limit lim_{var → approaching} expression. `from_right` distinguishes the
     /// one-sided variants.
     Limit {
         variable: String,
-        approaching: Box<ArithmosExpression>,
-        expression: Box<ArithmosExpression>,
+        approaching: Box<ArithmaExpression>,
+        expression: Box<ArithmaExpression>,
         #[serde(default)]
         from_right: bool,
     },
@@ -197,22 +197,22 @@ pub enum ArithmosExpression {
     /// Bounded product Î _{var = start..end} expression.
     Product {
         variable: String,
-        start: Box<ArithmosExpression>,
-        end: Box<ArithmosExpression>,
-        expression: Box<ArithmosExpression>,
+        start: Box<ArithmaExpression>,
+        end: Box<ArithmaExpression>,
+        expression: Box<ArithmaExpression>,
     },
 
     /// If-then-else.
     Conditional {
-        condition: Box<ArithmosExpression>,
-        then_expr: Box<ArithmosExpression>,
-        else_expr: Box<ArithmosExpression>,
+        condition: Box<ArithmaExpression>,
+        then_expr: Box<ArithmaExpression>,
+        else_expr: Box<ArithmaExpression>,
     },
 
     /// Cached f64 result with an explicit dirty flag (CLAUDE.md §4).
     #[serde(skip)]
     CachedValue {
-        expr: Box<ArithmosExpression>,
+        expr: Box<ArithmaExpression>,
         cached: Option<f64>,
         dirty: bool,
     },
@@ -221,9 +221,9 @@ pub enum ArithmosExpression {
     /// `transform` is populated lazily and skipped during serialisation.
     #[serde(skip_deserializing)]
     FourierOptimized {
-        expr: Box<ArithmosExpression>,
+        expr: Box<ArithmaExpression>,
         #[serde(skip)]
-        transform: Option<Box<crate::fourier::ArithmosFourierTransform>>,
+        transform: Option<Box<crate::fourier::ArithmaFourierTransform>>,
         #[serde(skip_serializing_if = "Option::is_none")]
         variable: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -231,27 +231,27 @@ pub enum ArithmosExpression {
     },
 }
 
-impl ArithmosExpression {
+impl ArithmaExpression {
     // ----- constructors -----
 
-    /// Number literal from an `ArithmosInteger`.
-    pub fn num(n: ArithmosInteger) -> Self {
-        ArithmosExpression::Number(n)
+    /// Number literal from an `ArithmaInteger`.
+    pub fn num(n: ArithmaInteger) -> Self {
+        ArithmaExpression::Number(n)
     }
 
     /// The literal zero.
     pub fn zero() -> Self {
-        ArithmosExpression::Number(ArithmosInteger::zero())
+        ArithmaExpression::Number(ArithmaInteger::zero())
     }
 
     /// Number literal from i64.
     pub fn from_i64(n: i64) -> Self {
-        ArithmosExpression::Number(ArithmosInteger::from_i64(n))
+        ArithmaExpression::Number(ArithmaInteger::from_i64(n))
     }
 
     /// Number literal from u64.
     pub fn from_u64(n: u64) -> Self {
-        ArithmosExpression::Number(ArithmosInteger::from_u64(n))
+        ArithmaExpression::Number(ArithmaInteger::from_u64(n))
     }
 
     /// Smart f64 constructor.
@@ -259,24 +259,24 @@ impl ArithmosExpression {
     /// Currently routes through the integer constructor when `f` is an exact
     /// integer in the i64 range; otherwise wraps `f` as a `Number / Number`
     /// rational with a fixed denominator scale. NaN and ±∞ get the matching
-    /// `ArithmosInteger` sentinel.
+    /// `ArithmaInteger` sentinel.
     pub fn from_f64(f: f64) -> Self {
         if f.is_nan() {
-            return ArithmosExpression::Number(ArithmosInteger::nan());
+            return ArithmaExpression::Number(ArithmaInteger::nan());
         }
         if f.is_infinite() {
-            let mut inf = ArithmosInteger::infinity();
+            let mut inf = ArithmaInteger::infinity();
             if f < 0.0 {
                 inf.value.set_negative(true);
             }
-            return ArithmosExpression::Number(inf);
+            return ArithmaExpression::Number(inf);
         }
         let rounded = f.round();
         if (f - rounded).abs() <= f64::EPSILON * f.abs().max(1.0)
             && rounded >= i64::MIN as f64
             && rounded <= i64::MAX as f64
         {
-            return ArithmosExpression::from_i64(rounded as i64);
+            return ArithmaExpression::from_i64(rounded as i64);
         }
         // Fall back to a fixed-scale rational. Use 1e15 so the rational
         // representation preserves the full ~15-digit precision of IEEE 754
@@ -291,22 +291,22 @@ impl ArithmosExpression {
         const PRECISE_MAGNITUDE_BOUND: f64 = 9.0e3;
         if f.abs() < PRECISE_MAGNITUDE_BOUND {
             let num = (f * PRECISE_SCALE).round() as i64;
-            return ArithmosExpression::div(
-                ArithmosExpression::from_i64(num),
-                ArithmosExpression::from_i64(PRECISE_SCALE as i64),
+            return ArithmaExpression::div(
+                ArithmaExpression::from_i64(num),
+                ArithmaExpression::from_i64(PRECISE_SCALE as i64),
             );
         }
         let scale: f64 = 1.0e9;
         let num = (f * scale).round() as i64;
-        ArithmosExpression::div(
-            ArithmosExpression::from_i64(num),
-            ArithmosExpression::from_i64(scale as i64),
+        ArithmaExpression::div(
+            ArithmaExpression::from_i64(num),
+            ArithmaExpression::from_i64(scale as i64),
         )
     }
 
     /// Variable expression.
     pub fn var(name: &str) -> Self {
-        ArithmosExpression::Variable(name.to_string())
+        ArithmaExpression::Variable(name.to_string())
     }
 
     /// Named constant.
@@ -316,7 +316,7 @@ impl ArithmosExpression {
         value: Option<f64>,
         allow_simplification: bool,
     ) -> Self {
-        ArithmosExpression::Constant {
+        ArithmaExpression::Constant {
             name: name.map(|s| s.to_string()),
             symbol: symbol.to_string(),
             cached_value: value,
@@ -327,50 +327,50 @@ impl ArithmosExpression {
     }
 
     /// Function application.
-    pub fn func(f: ArithmosFunction, args: Vec<ArithmosExpression>) -> Self {
-        ArithmosExpression::Function(f, args)
+    pub fn func(f: ArithmaFunction, args: Vec<ArithmaExpression>) -> Self {
+        ArithmaExpression::Function(f, args)
     }
 
     // ----- algebra builders -----
 
-    pub fn add(x: ArithmosExpression, y: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Add, vec![x, y])
+    pub fn add(x: ArithmaExpression, y: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Add, vec![x, y])
     }
-    pub fn sub(x: ArithmosExpression, y: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Subtract, vec![x, y])
+    pub fn sub(x: ArithmaExpression, y: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Subtract, vec![x, y])
     }
-    pub fn mul(x: ArithmosExpression, y: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Multiply, vec![x, y])
+    pub fn mul(x: ArithmaExpression, y: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Multiply, vec![x, y])
     }
-    pub fn div(x: ArithmosExpression, y: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Divide, vec![x, y])
+    pub fn div(x: ArithmaExpression, y: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Divide, vec![x, y])
     }
-    pub fn pow(x: ArithmosExpression, y: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Power, vec![x, y])
+    pub fn pow(x: ArithmaExpression, y: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Power, vec![x, y])
     }
-    pub fn neg(x: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Negate, vec![x])
+    pub fn neg(x: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Negate, vec![x])
     }
-    pub fn sqrt(x: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Sqrt, vec![x])
+    pub fn sqrt(x: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Sqrt, vec![x])
     }
 
     // ----- transcendentals -----
 
-    pub fn exp(x: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Exp, vec![x])
+    pub fn exp(x: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Exp, vec![x])
     }
-    pub fn ln(x: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Ln, vec![x])
+    pub fn ln(x: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Ln, vec![x])
     }
-    pub fn sin(x: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Sin, vec![x])
+    pub fn sin(x: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Sin, vec![x])
     }
-    pub fn cos(x: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Cos, vec![x])
+    pub fn cos(x: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Cos, vec![x])
     }
-    pub fn tan(x: ArithmosExpression) -> Self {
-        ArithmosExpression::Function(ArithmosFunction::Tan, vec![x])
+    pub fn tan(x: ArithmaExpression) -> Self {
+        ArithmaExpression::Function(ArithmaFunction::Tan, vec![x])
     }
 
     // ----- predicates -----
@@ -378,27 +378,27 @@ impl ArithmosExpression {
     /// Returns true if the expression contains no free variables.
     pub fn is_constant(&self) -> bool {
         match self {
-            ArithmosExpression::Number(_) => true,
-            ArithmosExpression::Constant { .. } => true,
-            ArithmosExpression::Variable(_) => false,
-            ArithmosExpression::Function(_, args) => args.iter().all(|a| a.is_constant()),
-            ArithmosExpression::Sum { .. } => false,
-            ArithmosExpression::Limit { .. } => false,
-            ArithmosExpression::Product { .. } => false,
-            ArithmosExpression::Conditional {
+            ArithmaExpression::Number(_) => true,
+            ArithmaExpression::Constant { .. } => true,
+            ArithmaExpression::Variable(_) => false,
+            ArithmaExpression::Function(_, args) => args.iter().all(|a| a.is_constant()),
+            ArithmaExpression::Sum { .. } => false,
+            ArithmaExpression::Limit { .. } => false,
+            ArithmaExpression::Product { .. } => false,
+            ArithmaExpression::Conditional {
                 condition,
                 then_expr,
                 else_expr,
             } => condition.is_constant() && then_expr.is_constant() && else_expr.is_constant(),
-            ArithmosExpression::CachedValue { expr, .. } => expr.is_constant(),
-            ArithmosExpression::FourierOptimized { expr, .. } => expr.is_constant(),
+            ArithmaExpression::CachedValue { expr, .. } => expr.is_constant(),
+            ArithmaExpression::FourierOptimized { expr, .. } => expr.is_constant(),
         }
     }
 
     /// Best-effort conversion to f64. Returns `None` if the expression contains
     /// free variables or otherwise cannot be reduced numerically.
     pub fn to_f64(&self) -> Option<f64> {
-        let bindings = ArithmosBindings::new();
+        let bindings = ArithmaBindings::new();
         match self.evaluate(&bindings) {
             Ok(v) if v.is_finite() || v.is_infinite() => Some(v),
             Ok(v) if v.is_nan() => Some(v),
@@ -415,9 +415,9 @@ impl ArithmosExpression {
 }
 
 /// JSON-friendly summary of how complex an expression is. Used by the simplifier
-/// to compare candidates and by the EML / Arithmos router to pick a backend.
+/// to compare candidates and by the EML / Arithma router to pick a backend.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct ArithmosComplexityMetrics {
+pub struct ArithmaComplexityMetrics {
     pub terms: usize,
     pub complexity: f64,
     pub simplicity: f64,
@@ -428,7 +428,7 @@ pub struct ArithmosComplexityMetrics {
 // ============================================================================
 
 /// Bindings used during numeric evaluation. Maps variable names to f64 values.
-pub type ArithmosBindings = HashMap<String, f64>;
+pub type ArithmaBindings = HashMap<String, f64>;
 
 /// Evaluate an expression numerically against a binding context.
 ///
@@ -437,7 +437,7 @@ pub type ArithmosBindings = HashMap<String, f64>;
 /// represented as a finite f64. They MUST NOT panic.
 pub trait Evaluable {
     /// Evaluate this expression numerically. Bindings supply variable values.
-    fn evaluate(&self, bindings: &ArithmosBindings) -> Result<f64, String>;
+    fn evaluate(&self, bindings: &ArithmaBindings) -> Result<f64, String>;
 }
 
 /// Symbolic differentiation.
@@ -447,7 +447,7 @@ pub trait Evaluable {
 /// from `Evaluable` because purely symbolic pipelines never need to evaluate.
 pub trait Differentiable {
     /// Returns the derivative of `self` with respect to `var`.
-    fn differentiate(&self, var: &str) -> Result<ArithmosExpression, String>;
+    fn differentiate(&self, var: &str) -> Result<ArithmaExpression, String>;
 }
 
 /// Simplification policy used by [`Simplify`].
@@ -496,7 +496,7 @@ pub enum EmitTarget {
 /// Emit an expression as source code in a target language.
 ///
 /// This is the abstraction the Phase-7 equation-ID texture path will use to
-/// turn Arithmos expressions into GLSL fragments before SPIR-V compilation.
+/// turn Arithma expressions into GLSL fragments before SPIR-V compilation.
 pub trait Emit {
     /// Emit `self` as a string in the chosen target dialect.
     fn emit(&self, target: EmitTarget) -> Result<String, String>;
@@ -509,18 +509,18 @@ pub trait Emit {
 
 /// Hard cap on the number of nodes an iterative evaluator will visit before
 /// bailing. Satisfies CLAUDE.md safety rule 2 (all loops have fixed bounds).
-const ARITHMOS_EVALUATE_NODE_CAP: usize = 1_048_576;
+const ARITHMA_EVALUATE_NODE_CAP: usize = 1_048_576;
 
-/// Apply a unary or binary `ArithmosFunction` to f64 operands.
+/// Apply a unary or binary `ArithmaFunction` to f64 operands.
 ///
 /// Pure helper so the iterative evaluator can stay short and the math table
 /// lives in one place. Returns `Err` on division by zero, unsupported variants
 /// or NaN-producing inputs.
-fn arithmos_apply_function(
-    func: &crate::function::ArithmosFunction,
+fn arithma_apply_function(
+    func: &crate::function::ArithmaFunction,
     args: &[f64],
 ) -> Result<f64, String> {
-    use crate::function::ArithmosFunction as F;
+    use crate::function::ArithmaFunction as F;
     debug_assert!(
         !args.is_empty() || matches!(func, F::Sum | F::Product { .. }),
         "no args for {func:?}"
@@ -585,13 +585,13 @@ fn arithmos_apply_function(
     }
 }
 
-impl Evaluable for ArithmosExpression {
-    fn evaluate(&self, bindings: &ArithmosBindings) -> Result<f64, String> {
+impl Evaluable for ArithmaExpression {
+    fn evaluate(&self, bindings: &ArithmaBindings) -> Result<f64, String> {
         // Iterative post-order traversal. We push (node, child_index) frames
         // and unwind values onto a separate value stack. No recursion.
         enum Frame<'a> {
-            Enter(&'a ArithmosExpression),
-            CombineFunc(&'a crate::function::ArithmosFunction, usize),
+            Enter(&'a ArithmaExpression),
+            CombineFunc(&'a crate::function::ArithmaFunction, usize),
             CombineCond,
         }
         let mut work: Vec<Frame> = Vec::with_capacity(32);
@@ -600,13 +600,13 @@ impl Evaluable for ArithmosExpression {
         let mut guard: usize = 0;
         while let Some(frame) = work.pop() {
             guard += 1;
-            if guard > ARITHMOS_EVALUATE_NODE_CAP {
+            if guard > ARITHMA_EVALUATE_NODE_CAP {
                 return Err("evaluate: node cap exceeded".into());
             }
             match frame {
                 Frame::Enter(node) => match node {
-                    ArithmosExpression::Number(n) => values.push(n.to_f64()),
-                    ArithmosExpression::Constant {
+                    ArithmaExpression::Number(n) => values.push(n.to_f64()),
+                    ArithmaExpression::Constant {
                         cached_value,
                         symbol,
                         ..
@@ -617,18 +617,18 @@ impl Evaluable for ArithmosExpression {
                             return Err(format!("constant '{symbol}' has no cached value"));
                         }
                     }
-                    ArithmosExpression::Variable(name) => match bindings.get(name) {
+                    ArithmaExpression::Variable(name) => match bindings.get(name) {
                         Some(v) => values.push(*v),
                         None => return Err(format!("unbound variable '{name}'")),
                     },
-                    ArithmosExpression::Function(func, args) => {
+                    ArithmaExpression::Function(func, args) => {
                         work.push(Frame::CombineFunc(func, args.len()));
                         // Children pushed in reverse so the first child is evaluated first.
                         for a in args.iter().rev() {
                             work.push(Frame::Enter(a));
                         }
                     }
-                    ArithmosExpression::Conditional {
+                    ArithmaExpression::Conditional {
                         condition,
                         then_expr,
                         else_expr,
@@ -638,14 +638,14 @@ impl Evaluable for ArithmosExpression {
                         work.push(Frame::Enter(then_expr));
                         work.push(Frame::Enter(condition));
                     }
-                    ArithmosExpression::CachedValue { expr, cached, .. } => {
+                    ArithmaExpression::CachedValue { expr, cached, .. } => {
                         if let Some(v) = *cached {
                             values.push(v);
                         } else {
                             work.push(Frame::Enter(expr));
                         }
                     }
-                    ArithmosExpression::FourierOptimized { expr, .. } => {
+                    ArithmaExpression::FourierOptimized { expr, .. } => {
                         work.push(Frame::Enter(expr));
                     }
                     _ => {
@@ -658,7 +658,7 @@ impl Evaluable for ArithmosExpression {
                     }
                     let start = values.len() - n;
                     let args_slice: Vec<f64> = values.drain(start..).collect();
-                    let out = arithmos_apply_function(func, &args_slice)?;
+                    let out = arithma_apply_function(func, &args_slice)?;
                     values.push(out);
                 }
                 Frame::CombineCond => {
@@ -679,13 +679,13 @@ impl Evaluable for ArithmosExpression {
     }
 }
 
-impl Differentiable for ArithmosExpression {
-    fn differentiate(&self, var: &str) -> Result<ArithmosExpression, String> {
+impl Differentiable for ArithmaExpression {
+    fn differentiate(&self, var: &str) -> Result<ArithmaExpression, String> {
         crate::calculus::differentiation_iterative::differentiate_iterative(self, var)
     }
 }
 
-impl Simplify for ArithmosExpression {
+impl Simplify for ArithmaExpression {
     fn simplify(&self, _config: &SimplificationConfig) -> Self {
         // Trivial placeholder: returning the input unchanged is a valid
         // simplification (it just performs no work).
@@ -697,11 +697,29 @@ impl Simplify for ArithmosExpression {
     }
 }
 
-impl Emit for ArithmosExpression {
+impl Emit for ArithmaExpression {
     fn emit(&self, _target: EmitTarget) -> Result<String, String> {
-        unimplemented!("ArithmosExpression::emit — populated in Wave 3")
+        unimplemented!("ArithmaExpression::emit — populated in Wave 3")
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaBindings`")]
+#[allow(unused)]
+pub use self::ArithmaBindings as ArithmosBindings;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaComplexityMetrics`")]
+#[allow(unused)]
+pub use self::ArithmaComplexityMetrics as ArithmosComplexityMetrics;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaExpression`")]
+#[allow(unused)]
+pub use self::ArithmaExpression as ArithmosExpression;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaSIPrefix`")]
+#[allow(unused)]
+pub use self::ArithmaSIPrefix as ArithmosSIPrefix;
 
 #[cfg(test)]
 mod tests {
@@ -709,30 +727,30 @@ mod tests {
 
     #[test]
     fn zero_is_a_number() {
-        let z = ArithmosExpression::zero();
-        assert!(matches!(z, ArithmosExpression::Number(_)));
+        let z = ArithmaExpression::zero();
+        assert!(matches!(z, ArithmaExpression::Number(_)));
         assert!(z.is_constant());
     }
 
     #[test]
     fn variable_is_not_constant() {
-        let v = ArithmosExpression::var("x");
+        let v = ArithmaExpression::var("x");
         assert!(!v.is_constant());
     }
 
     #[test]
     fn si_prefix_kilo_multiplier() {
-        let prefix = ArithmosSIPrefix::Kilo;
+        let prefix = ArithmaSIPrefix::Kilo;
         assert!((prefix.multiplier() - 1e3).abs() < f64::EPSILON);
         assert_eq!(prefix.symbol(), "k");
     }
 
     #[test]
     fn simplify_default_is_identity() {
-        let expr = ArithmosExpression::var("x");
+        let expr = ArithmaExpression::var("x");
         let cfg = SimplificationConfig::default();
         let out = expr.simplify(&cfg);
         // Default simplify is a no-op — equal-shape result.
-        assert!(matches!(out, ArithmosExpression::Variable(_)));
+        assert!(matches!(out, ArithmaExpression::Variable(_)));
     }
 }

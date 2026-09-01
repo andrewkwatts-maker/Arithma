@@ -12,11 +12,11 @@
 //! Generic entry point for choosing a numerical solver. Routes to the
 //! specialised implementations in [`super::root_finding`].
 
-use crate::expression::ArithmosExpression;
+use crate::expression::ArithmaExpression;
 
 /// Choice of numerical method.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ArithmosNumericalMethod {
+pub enum ArithmaNumericalMethod {
     Bisection,
     NewtonRaphson,
     Secant,
@@ -25,13 +25,22 @@ pub enum ArithmosNumericalMethod {
 
 /// Solve `expr = 0` for `var` using the specified method. Wave-2 stub.
 pub fn solve_with_method(
-    _expr: &ArithmosExpression,
+    _expr: &ArithmaExpression,
     _var: &str,
-    _method: ArithmosNumericalMethod,
+    _method: ArithmaNumericalMethod,
     _initial: f64,
 ) -> Result<f64, String> {
     unimplemented!("solve_with_method — populated in Wave 3")
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaNumericalMethod`")]
+#[allow(unused)]
+pub use self::ArithmaNumericalMethod as ArithmosNumericalMethod;
 
 #[cfg(test)]
 mod tests {
@@ -40,8 +49,8 @@ mod tests {
     #[test]
     fn methods_are_distinct() {
         assert_ne!(
-            ArithmosNumericalMethod::Bisection,
-            ArithmosNumericalMethod::NewtonRaphson
+            ArithmaNumericalMethod::Bisection,
+            ArithmaNumericalMethod::NewtonRaphson
         );
     }
 }

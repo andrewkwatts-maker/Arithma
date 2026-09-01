@@ -11,12 +11,12 @@
 // CI runs `cargo clippy -- -D warnings`, so every exception is deliberate and
 // justified here rather than silenced at the call site.
 
-// `ArithmosExpression::{add, sub, mul, div, neg}` are *builders* that consume
+// `ArithmaExpression::{add, sub, mul, div, neg}` are *builders* that consume
 // and return `Self` to compose an AST — they are not arithmetic. Implementing
 // `std::ops::Add` instead would mean `a + b` silently allocates a tree, which
 // is exactly the ambiguity this API avoids.
 #![allow(clippy::should_implement_trait)]
-// `ArithmosExpression` and the differentiator's `Frame` are deliberately large
+// `ArithmaExpression` and the differentiator's `Frame` are deliberately large
 // enums: boxing a variant to even out the size moves an allocation onto the hot
 // traversal path. Revisit if profiling ever says otherwise.
 #![allow(clippy::large_enum_variant)]
@@ -37,12 +37,12 @@
 //!
 //! ## Module map
 //!
-//! - [`expression`] — `ArithmosExpression` AST plus iterative and runtime simplifier
+//! - [`expression`] — `ArithmaExpression` AST plus iterative and runtime simplifier
 //!   passes. The substrate every other module ultimately emits or consumes.
-//! - [`function`] — `ArithmosFunction` enum: arithmetic, transcendental, calculus
+//! - [`function`] — `ArithmaFunction` enum: arithmetic, transcendental, calculus
 //!   and statistical operators that appear inside `Expression::Function` nodes.
-//! - [`integer`] — `ArithmosInteger` exact unlimited-precision integer.
-//! - [`variable`] — `ArithmosVariable` named variable with optional bound value.
+//! - [`integer`] — `ArithmaInteger` exact unlimited-precision integer.
+//! - [`variable`] — `ArithmaVariable` named variable with optional bound value.
 //! - [`constants`] — Global constants registry. Loads `default_constants.json` at
 //!   first access (embedded via `include_str!`).
 //! - [`calculus`] — Symbolic and iterative differentiation, integration.
@@ -56,7 +56,7 @@
 //!   first access (embedded via `include_str!`).
 //! - [`lookup`] — Trig and general math hash-lookup tables.
 //! - [`fallback`] — Fallback dispatch system when a primary backend cannot evaluate.
-//! - [`external`] — External-function registry (the Arithmos / eml-math / engine
+//! - [`external`] — External-function registry (the Arithma / eml-math / engine
 //!   three-way routing entry point) plus C++ and Rust dynamic executors.
 //! - [`arithmetic`] — Lossless internal arithmetic helpers.
 //! - [`pyfacade`] — PyO3 wrapper structs (gated by the `python` feature).
@@ -64,9 +64,9 @@
 //! ## Cross-library interop
 //!
 //! Downstream libraries (eml-math, eml-spectral, metaphysica, periodica) opt into
-//! Arithmos by enabling their `with-arithma` feature flag and implementing
-//! [`ArithmosInterop`] on their expression-bearing types. This lets every library
-//! carry an `ArithmosExpression` payload so the engine can keep bitwise-deterministic
+//! Arithma by enabling their `with-arithma` feature flag and implementing
+//! [`ArithmaInterop`] on their expression-bearing types. This lets every library
+//! carry an `ArithmaExpression` payload so the engine can keep bitwise-deterministic
 //! semantics across the entire stack while PyPI consumers stay independent.
 
 #![allow(clippy::module_inception)]
@@ -95,19 +95,45 @@ pub mod variable;
 pub mod pyfacade;
 
 // Re-export the most commonly used types at the crate root for ergonomic access.
+pub use crate::constants::ArithmaConstants;
+pub use crate::expression::ArithmaExpression;
+pub use crate::external::registry::{
+    ArithmaExternalFunctionError, ArithmaExternalFunctionRegistry,
+};
+pub use crate::fourier::ArithmaFourierConfig;
+pub use crate::function::ArithmaFunction;
+pub use crate::integer::ArithmaInteger;
+pub use crate::si_units::ArithmaSIUnits;
+pub use crate::unit::ArithmaUnit;
+pub use crate::variable::ArithmaVariable;
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names at the
+// crate root. Retained for one release; downstream (eml-math, eml-spectral,
+// metaphysica, periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[allow(deprecated)]
 pub use crate::constants::ArithmosConstants;
+#[allow(deprecated)]
 pub use crate::expression::ArithmosExpression;
+#[allow(deprecated)]
 pub use crate::external::registry::{
     ArithmosExternalFunctionError, ArithmosExternalFunctionRegistry,
 };
+#[allow(deprecated)]
 pub use crate::fourier::ArithmosFourierConfig;
+#[allow(deprecated)]
 pub use crate::function::ArithmosFunction;
+#[allow(deprecated)]
 pub use crate::integer::ArithmosInteger;
+#[allow(deprecated)]
 pub use crate::si_units::ArithmosSIUnits;
+#[allow(deprecated)]
 pub use crate::unit::ArithmosUnit;
+#[allow(deprecated)]
 pub use crate::variable::ArithmosVariable;
 
-/// Returns the library name. Used by the `arithmos` Python package facade and by
+/// Returns the library name. Used by the `arithma` Python package facade and by
 /// engine init logging.
 pub fn hello() -> &'static str {
     "arithma"
@@ -121,32 +147,41 @@ pub fn version() -> &'static str {
 /// Cross-library interop trait.
 ///
 /// Downstream libraries (eml-math, eml-spectral, metaphysica, periodica) opt into
-/// Arithmos by implementing this trait on their expression-bearing types behind a
+/// Arithma by implementing this trait on their expression-bearing types behind a
 /// `with-arithma` feature flag. The engine then has a single, uniform substrate
-/// (`ArithmosExpression`) over which every library can be inspected, simplified,
+/// (`ArithmaExpression`) over which every library can be inspected, simplified,
 /// differentiated or compared.
 ///
 /// The trait is intentionally narrow — only conversion methods plus an associated
 /// error type — so libraries can implement it without taking on the rest of
-/// Arithmos's surface as a hard dependency.
-pub trait ArithmosInterop {
+/// Arithma's surface as a hard dependency.
+pub trait ArithmaInterop {
     /// Error type returned by a failed conversion. Libraries are free to use
     /// their own error type or `String` for simplicity.
     type Error;
 
-    /// Convert a downstream-library expression into an `ArithmosExpression`.
+    /// Convert a downstream-library expression into an `ArithmaExpression`.
     ///
     /// Implementations should preserve symbolic structure where possible and only
     /// fall through to numeric literals when the source has no symbolic meaning.
-    fn to_arithma(&self) -> Result<ArithmosExpression, Self::Error>;
+    fn to_arithma(&self) -> Result<ArithmaExpression, Self::Error>;
 
-    /// Convert an `ArithmosExpression` into a downstream-library expression. Used
+    /// Convert an `ArithmaExpression` into a downstream-library expression. Used
     /// by the engine when results need to flow back into the originating library
     /// (for re-evaluation or rendering).
-    fn from_arithma(expr: &ArithmosExpression) -> Result<Self, Self::Error>
+    fn from_arithma(expr: &ArithmaExpression) -> Result<Self, Self::Error>
     where
         Self: Sized;
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaInterop`")]
+#[allow(unused)]
+pub use self::ArithmaInterop as ArithmosInterop;
 
 #[cfg(test)]
 mod tests {
@@ -165,8 +200,25 @@ mod tests {
     #[test]
     fn re_exports_resolve() {
         // Compile-time smoke: each re-export path must resolve.
-        let _: Option<ArithmosExpression> = None;
-        let _: Option<ArithmosFunction> = None;
-        let _: Option<ArithmosInteger> = None;
+        let _: Option<ArithmaExpression> = None;
+        let _: Option<ArithmaFunction> = None;
+        let _: Option<ArithmaInteger> = None;
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn arithmos_compat_aliases_resolve_to_the_same_type() {
+        // The pre-rename `Arithmos*` names are kept as aliases for one release
+        // so downstream crates don't break. Prove they name the exact same
+        // type as the `Arithma*` name, not a copy.
+        let expr: ArithmaExpression = ArithmaExpression::zero();
+        let alias: ArithmosExpression = expr;
+        let _: ArithmaExpression = alias;
+
+        fn takes_new(_: ArithmaInteger) {}
+        fn takes_old(v: ArithmosInteger) {
+            takes_new(v);
+        }
+        let _ = takes_old;
     }
 }

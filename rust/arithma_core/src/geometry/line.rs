@@ -11,30 +11,39 @@
 //!
 //! Parametric line `P(t) = origin + t · direction`. Both vectors are symbolic.
 
-use crate::expression::ArithmosExpression;
-use crate::geometry::vector::ArithmosVector;
+use crate::expression::ArithmaExpression;
+use crate::geometry::vector::ArithmaVector;
 
 /// Parametric line: `P(t) = origin + t * direction`.
 #[derive(Debug, Clone)]
-pub struct ArithmosLine {
+pub struct ArithmaLine {
     /// Origin point.
-    pub origin: ArithmosVector,
+    pub origin: ArithmaVector,
     /// Direction vector. Need not be unit-length — the parametric form handles
     /// scaling.
-    pub direction: ArithmosVector,
+    pub direction: ArithmaVector,
 }
 
-impl ArithmosLine {
+impl ArithmaLine {
     /// Construct a line from origin and direction.
-    pub fn new(origin: ArithmosVector, direction: ArithmosVector) -> Self {
+    pub fn new(origin: ArithmaVector, direction: ArithmaVector) -> Self {
         Self { origin, direction }
     }
 
     /// Evaluate the line at parameter `t`. Wave-2 stub.
-    pub fn at(&self, _t: ArithmosExpression) -> ArithmosVector {
-        unimplemented!("ArithmosLine::at — populated in Wave 3")
+    pub fn at(&self, _t: ArithmaExpression) -> ArithmaVector {
+        unimplemented!("ArithmaLine::at — populated in Wave 3")
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaLine`")]
+#[allow(unused)]
+pub use self::ArithmaLine as ArithmosLine;
 
 #[cfg(test)]
 mod tests {
@@ -42,7 +51,7 @@ mod tests {
 
     #[test]
     fn new_line_round_trip() {
-        let line = ArithmosLine::new(ArithmosVector::zero(), ArithmosVector::zero());
+        let line = ArithmaLine::new(ArithmaVector::zero(), ArithmaVector::zero());
         // Just exercise construction.
         let _ = line.origin;
     }

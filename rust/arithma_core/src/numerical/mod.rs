@@ -25,12 +25,12 @@ pub mod interval_analysis;
 pub mod methods;
 pub mod root_finding;
 
-pub use critical_points::{ArithmosCriticalPoint, ArithmosCriticalPointKind};
-pub use interval_analysis::ArithmosInterval;
-pub use methods::{solve_with_method, ArithmosNumericalMethod};
+pub use critical_points::{ArithmaCriticalPoint, ArithmaCriticalPointKind};
+pub use interval_analysis::ArithmaInterval;
+pub use methods::{solve_with_method, ArithmaNumericalMethod};
 pub use root_finding::{
-    find_root_bisection, find_root_newton_raphson, find_root_secant, ArithmosRootFindingConfig,
-    ArithmosRootFindingResult,
+    find_root_bisection, find_root_newton_raphson, find_root_secant, ArithmaRootFindingConfig,
+    ArithmaRootFindingResult,
 };
 
 #[cfg(test)]
@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn numerical_re_exports_resolve() {
-        let _: Option<ArithmosInterval> = None;
-        let _: Option<ArithmosNumericalMethod> = None;
+        let _: Option<ArithmaInterval> = None;
+        let _: Option<ArithmaNumericalMethod> = None;
     }
 }

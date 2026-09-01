@@ -12,27 +12,27 @@
 //! Symbolic integration. Wave-2 stub exposes the public API; Wave 3 wires in
 //! table lookup, integration by parts and the substitution heuristics.
 
-use crate::expression::ArithmosExpression;
+use crate::expression::ArithmaExpression;
 
 /// Indefinite integral ∫ expr d{var}. Wave-2 stub.
-pub fn integrate(_expr: &ArithmosExpression, _var: &str) -> Result<ArithmosExpression, String> {
+pub fn integrate(_expr: &ArithmaExpression, _var: &str) -> Result<ArithmaExpression, String> {
     unimplemented!("integrate — populated in Wave 3")
 }
 
 /// Definite integral ∫_{lo}^{hi} expr d{var}. Wave-2 stub.
 pub fn integrate_definite(
-    _expr: &ArithmosExpression,
+    _expr: &ArithmaExpression,
     _var: &str,
-    _lo: &ArithmosExpression,
-    _hi: &ArithmosExpression,
-) -> Result<ArithmosExpression, String> {
+    _lo: &ArithmaExpression,
+    _hi: &ArithmaExpression,
+) -> Result<ArithmaExpression, String> {
     unimplemented!("integrate_definite — populated in Wave 3")
 }
 
 /// Numeric quadrature fall-back when symbolic integration cannot close the
 /// expression. Returns the f64 approximation. Wave-2 stub.
 pub fn integrate_numeric(
-    _expr: &ArithmosExpression,
+    _expr: &ArithmaExpression,
     _var: &str,
     _lo: f64,
     _hi: f64,

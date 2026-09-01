@@ -11,16 +11,16 @@
 //!
 //! The Gaussian / normal distribution `N(Î¼, Ïƒ²)`.
 
-use crate::probabilities::ArithmosDistribution;
+use crate::probabilities::ArithmaDistribution;
 
 /// Normal distribution `N(mean, std_dev²)`.
 #[derive(Debug, Clone, Copy)]
-pub struct ArithmosNormal {
+pub struct ArithmaNormal {
     pub mean: f64,
     pub std_dev: f64,
 }
 
-impl ArithmosNormal {
+impl ArithmaNormal {
     /// Standard normal `N(0, 1)`.
     pub fn standard() -> Self {
         Self {
@@ -35,12 +35,12 @@ impl ArithmosNormal {
     }
 }
 
-impl ArithmosDistribution for ArithmosNormal {
+impl ArithmaDistribution for ArithmaNormal {
     fn pdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosNormal::pdf — populated in Wave 3")
+        unimplemented!("ArithmaNormal::pdf — populated in Wave 3")
     }
     fn cdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosNormal::cdf — populated in Wave 3")
+        unimplemented!("ArithmaNormal::cdf — populated in Wave 3")
     }
     fn mean(&self) -> Result<f64, String> {
         Ok(self.mean)
@@ -50,13 +50,22 @@ impl ArithmosDistribution for ArithmosNormal {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaNormal`")]
+#[allow(unused)]
+pub use self::ArithmaNormal as ArithmosNormal;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn standard_normal_has_unit_variance() {
-        let n = ArithmosNormal::standard();
+        let n = ArithmaNormal::standard();
         assert_eq!(n.variance().unwrap(), 1.0);
     }
 }

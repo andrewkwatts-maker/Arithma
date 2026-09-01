@@ -15,11 +15,11 @@
 //! `pt-arithmos/src/math/pt_trig_hash_lookup.rs::trig_ids` (Wave 3, plan
 //! §F.8 step 1). The IDs are the contract — same numeric values, same
 //! semantics — so the engine and any other downstream consumer can route
-//! a canonical-angle lookup through either Arithmos (here) or pt-arithmos
+//! a canonical-angle lookup through either Arithma (here) or pt-arithmos
 //! (legacy) and get the same answer.
 //!
-//! The `fast_trig::*` lookups that produced `ArithmosExpression` results live
-//! in pt-arithmos until `ArithmosExpression` and `ArithmosInteger` graduate
+//! The `fast_trig::*` lookups that produced `ArithmaExpression` results live
+//! in pt-arithmos until `ArithmaExpression` and `ArithmaInteger` graduate
 //! from stub status. Once they do, those functions migrate here too.
 
 /// Compile-time constant IDs for ultra-fast trigonometric evaluation. Each
@@ -96,7 +96,7 @@ pub fn angle_radians(id: u32) -> Option<f64> {
 
 /// Look up an exact symbolic value of `sin(angle_id)` for a canonical-angle
 /// ID. Wave-2 returns a numeric f64 (the underlying value); Wave 3 will
-/// switch this to return `ArithmosExpression` once that AST graduates from
+/// switch this to return `ArithmaExpression` once that AST graduates from
 /// stub.
 pub fn lookup_sin(angle_id: u32) -> Option<f64> {
     angle_radians(angle_id).map(f64::sin)

@@ -12,16 +12,16 @@
 //! Interval arithmetic for guaranteed bounds. Used by the root finder to prune
 //! search regions and by the simplifier to detect provably-empty branches.
 
-use crate::expression::ArithmosExpression;
+use crate::expression::ArithmaExpression;
 
 /// Closed interval `[lo, hi]` over the reals.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ArithmosInterval {
+pub struct ArithmaInterval {
     pub lo: f64,
     pub hi: f64,
 }
 
-impl ArithmosInterval {
+impl ArithmaInterval {
     /// Construct an interval. `lo` must be ≤ `hi`.
     pub fn new(lo: f64, hi: f64) -> Self {
         Self { lo, hi }
@@ -62,12 +62,21 @@ impl ArithmosInterval {
 /// Compute the interval-arithmetic image of `expr` when `var` ranges over
 /// `interval`. Wave-2 stub.
 pub fn evaluate_interval(
-    _expr: &ArithmosExpression,
+    _expr: &ArithmaExpression,
     _var: &str,
-    _interval: ArithmosInterval,
-) -> Result<ArithmosInterval, String> {
+    _interval: ArithmaInterval,
+) -> Result<ArithmaInterval, String> {
     unimplemented!("evaluate_interval — populated in Wave 3")
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaInterval`")]
+#[allow(unused)]
+pub use self::ArithmaInterval as ArithmosInterval;
 
 #[cfg(test)]
 mod tests {
@@ -75,13 +84,13 @@ mod tests {
 
     #[test]
     fn unit_interval_contains_zero_five() {
-        let i = ArithmosInterval::new(0.0, 1.0);
+        let i = ArithmaInterval::new(0.0, 1.0);
         assert!(i.contains(0.5));
     }
 
     #[test]
     fn empty_interval_contains_nothing() {
-        let i = ArithmosInterval::empty();
+        let i = ArithmaInterval::empty();
         assert!(i.is_empty());
     }
 }

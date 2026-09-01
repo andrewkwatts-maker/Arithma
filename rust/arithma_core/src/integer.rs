@@ -9,12 +9,12 @@
 
 //! # Integer
 //!
-//! `ArithmosInteger` — exact, unlimited-precision integer used in place of f64
+//! `ArithmaInteger` — exact, unlimited-precision integer used in place of f64
 //! and i64 throughout the AST. Mirrors `pt_arithmos::PTInteger` and inherits
 //! its split design:
 //!
-//! - [`ArithmosInternalInteger`] holds the bytes-and-flags representation.
-//! - [`ArithmosInteger`] adds an optional base SI unit.
+//! - [`ArithmaInternalInteger`] holds the bytes-and-flags representation.
+//! - [`ArithmaInteger`] adds an optional base SI unit.
 //!
 //! Special values (NaN, infinity, imaginary, infinitesimal, exact-rational)
 //! are tracked via flag bits inside the internal representation so the same
@@ -22,7 +22,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Special-value flag bits for [`ArithmosInternalInteger`]. Public-but-stable so
+/// Special-value flag bits for [`ArithmaInternalInteger`]. Public-but-stable so
 /// downstream backends can route based on flag inspection without exposing the
 /// internal byte layout.
 pub mod flag {
@@ -34,14 +34,14 @@ pub mod flag {
     pub const RATIONAL: u16 = 0x0080;
 }
 
-/// Tunable behaviour for `ArithmosInteger`. Mirrors `PTIntegerConfig`.
+/// Tunable behaviour for `ArithmaInteger`. Mirrors `PTIntegerConfig`.
 #[derive(Debug, Clone)]
-pub struct ArithmosIntegerConfig {
+pub struct ArithmaIntegerConfig {
     /// Try to extract symbolic constants from f64 inputs when possible.
     pub extract_constants_from_floats: bool,
 }
 
-impl Default for ArithmosIntegerConfig {
+impl Default for ArithmaIntegerConfig {
     fn default() -> Self {
         Self {
             extract_constants_from_floats: true,
@@ -54,14 +54,14 @@ impl Default for ArithmosIntegerConfig {
 /// Bytes are stored little-endian (least-significant byte first). The vector
 /// is never empty — `[0]` represents zero and is the canonical empty form.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ArithmosInternalInteger {
+pub struct ArithmaInternalInteger {
     /// Special-value flags. See [`flag`].
     pub flags: u16,
     /// Base-256 little-endian digits.
     pub value: Vec<u8>,
 }
 
-impl ArithmosInternalInteger {
+impl ArithmaInternalInteger {
     /// Construct a fresh zero. Flags are cleared.
     pub fn new() -> Self {
         Self {
@@ -115,7 +115,7 @@ impl ArithmosInternalInteger {
     /// Convert the little-endian magnitude to an f64.
     ///
     /// Special-value flags (NaN, infinity) take precedence over the raw bytes
-    /// so the conversion is consistent with [`ArithmosInteger::to_f64`].
+    /// so the conversion is consistent with [`ArithmaInteger::to_f64`].
     pub fn to_f64(&self) -> f64 {
         if self.is_nan() {
             return f64::NAN;
@@ -174,7 +174,7 @@ impl ArithmosInternalInteger {
     }
 }
 
-impl Default for ArithmosInternalInteger {
+impl Default for ArithmaInternalInteger {
     fn default() -> Self {
         Self::new()
     }
@@ -182,18 +182,18 @@ impl Default for ArithmosInternalInteger {
 
 /// Public-facing integer with optional base-SI-unit attribution.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ArithmosInteger {
+pub struct ArithmaInteger {
     /// Underlying integer value.
-    pub value: ArithmosInternalInteger,
+    pub value: ArithmaInternalInteger,
     /// Optional base SI unit (only the seven base units: m, kg, s, A, K, mol, cd).
     pub unit: Option<String>,
 }
 
-impl ArithmosInteger {
+impl ArithmaInteger {
     /// Construct zero.
     pub fn zero() -> Self {
         Self {
-            value: ArithmosInternalInteger::new(),
+            value: ArithmaInternalInteger::new(),
             unit: None,
         }
     }
@@ -201,7 +201,7 @@ impl ArithmosInteger {
     /// Construct from u64.
     pub fn from_u64(value: u64) -> Self {
         Self {
-            value: ArithmosInternalInteger::from_u64(value),
+            value: ArithmaInternalInteger::from_u64(value),
             unit: None,
         }
     }
@@ -209,14 +209,14 @@ impl ArithmosInteger {
     /// Construct from i64.
     pub fn from_i64(value: i64) -> Self {
         Self {
-            value: ArithmosInternalInteger::from_i64(value),
+            value: ArithmaInternalInteger::from_i64(value),
             unit: None,
         }
     }
 
     /// IEEE infinity sentinel.
     pub fn infinity() -> Self {
-        let mut v = ArithmosInternalInteger::new();
+        let mut v = ArithmaInternalInteger::new();
         v.flags |= flag::INFINITY;
         Self {
             value: v,
@@ -226,7 +226,7 @@ impl ArithmosInteger {
 
     /// IEEE NaN sentinel.
     pub fn nan() -> Self {
-        let mut v = ArithmosInternalInteger::new();
+        let mut v = ArithmaInternalInteger::new();
         v.flags |= flag::NAN;
         Self {
             value: v,
@@ -242,11 +242,26 @@ impl ArithmosInteger {
     }
 }
 
-impl Default for ArithmosInteger {
+impl Default for ArithmaInteger {
     fn default() -> Self {
         Self::zero()
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaInteger`")]
+#[allow(unused)]
+pub use self::ArithmaInteger as ArithmosInteger;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaIntegerConfig`")]
+#[allow(unused)]
+pub use self::ArithmaIntegerConfig as ArithmosIntegerConfig;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaInternalInteger`")]
+#[allow(unused)]
+pub use self::ArithmaInternalInteger as ArithmosInternalInteger;
 
 #[cfg(test)]
 mod tests {
@@ -254,25 +269,25 @@ mod tests {
 
     #[test]
     fn zero_has_no_flags() {
-        let z = ArithmosInteger::zero();
+        let z = ArithmaInteger::zero();
         assert_eq!(z.value.flags, 0);
     }
 
     #[test]
     fn infinity_sets_flag() {
-        let i = ArithmosInteger::infinity();
+        let i = ArithmaInteger::infinity();
         assert!(i.value.is_infinity());
     }
 
     #[test]
     fn nan_sets_flag() {
-        let n = ArithmosInteger::nan();
+        let n = ArithmaInteger::nan();
         assert!(n.value.is_nan());
     }
 
     #[test]
     fn negative_flag_round_trip() {
-        let mut v = ArithmosInternalInteger::new();
+        let mut v = ArithmaInternalInteger::new();
         assert!(!v.is_negative());
         v.set_negative(true);
         assert!(v.is_negative());
@@ -282,27 +297,27 @@ mod tests {
 
     #[test]
     fn from_u64_round_trips_through_f64() {
-        let one = ArithmosInternalInteger::from_u64(1);
+        let one = ArithmaInternalInteger::from_u64(1);
         assert_eq!(one.to_f64(), 1.0);
-        let big = ArithmosInternalInteger::from_u64(1_000_000);
+        let big = ArithmaInternalInteger::from_u64(1_000_000);
         assert_eq!(big.to_f64(), 1_000_000.0);
-        let zero = ArithmosInternalInteger::from_u64(0);
+        let zero = ArithmaInternalInteger::from_u64(0);
         assert_eq!(zero.to_f64(), 0.0);
     }
 
     #[test]
     fn from_i64_handles_sign() {
-        let pos = ArithmosInternalInteger::from_i64(42);
+        let pos = ArithmaInternalInteger::from_i64(42);
         assert_eq!(pos.to_f64(), 42.0);
-        let neg = ArithmosInternalInteger::from_i64(-42);
+        let neg = ArithmaInternalInteger::from_i64(-42);
         assert!(neg.is_negative());
         assert_eq!(neg.to_f64(), -42.0);
     }
 
     #[test]
-    fn arithmos_integer_to_f64_handles_specials() {
-        assert!(ArithmosInteger::nan().to_f64().is_nan());
-        assert_eq!(ArithmosInteger::infinity().to_f64(), f64::INFINITY);
-        assert_eq!(ArithmosInteger::from_i64(-7).to_f64(), -7.0);
+    fn arithma_integer_to_f64_handles_specials() {
+        assert!(ArithmaInteger::nan().to_f64().is_nan());
+        assert_eq!(ArithmaInteger::infinity().to_f64(), f64::INFINITY);
+        assert_eq!(ArithmaInteger::from_i64(-7).to_f64(), -7.0);
     }
 }

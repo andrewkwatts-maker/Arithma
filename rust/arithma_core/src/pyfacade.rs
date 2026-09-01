@@ -17,16 +17,16 @@
 //! Wave-3 surface
 //! --------------
 //!
-//! - `Expression` wraps `ArithmosExpression`. Constructors: `Expression.variable(name)`,
+//! - `Expression` wraps `ArithmaExpression`. Constructors: `Expression.variable(name)`,
 //!   `Expression.number(value)`, `Expression.constant(...)`. Builders for
 //!   `add/sub/mul/div/pow/neg` plus the transcendental family `sin/cos/tan/exp/ln/sqrt`.
 //!   Python dunder operators map onto the same builders. `evaluate(env)`,
 //!   `to_latex()`, `children()`, `is_constant()` round out the surface.
-//! - `Integer` wraps `ArithmosInteger`. Construction from arbitrary-precision
+//! - `Integer` wraps `ArithmaInteger`. Construction from arbitrary-precision
 //!   decimal strings (`Integer.from_str(s)`) and from i64. `value()` returns a
 //!   true Python int reconstructed from the little-endian byte vector so callers
 //!   never lose precision through f64.
-//! - `Variable` wraps `ArithmosVariable`. The `binding` keyword accepts a
+//! - `Variable` wraps `ArithmaVariable`. The `binding` keyword accepts a
 //!   `float`, an `Expression`, or `None` so callers can express bound, symbolic,
 //!   or free variables in one constructor.
 //!
@@ -41,10 +41,10 @@ use pyo3::exceptions::{PyKeyError, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyInt, PyList, PyString};
 
-use crate::expression::{ArithmosBindings, ArithmosExpression, Evaluable};
-use crate::function::ArithmosFunction;
-use crate::integer::{flag, ArithmosInteger, ArithmosInternalInteger};
-use crate::variable::{ArithmosVariable, ArithmosVariableValue};
+use crate::expression::{ArithmaBindings, ArithmaExpression, Evaluable};
+use crate::function::ArithmaFunction;
+use crate::integer::{flag, ArithmaInteger, ArithmaInternalInteger};
+use crate::variable::{ArithmaVariable, ArithmaVariableValue};
 
 // ============================================================================
 // Module-level functions (retained from Wave 2 scaffold).
@@ -68,17 +68,17 @@ fn is_rust_backend() -> bool {
 // Helpers.
 // ============================================================================
 
-/// Convert a Python object into an `ArithmosExpression`. Accepts ints, floats,
+/// Convert a Python object into an `ArithmaExpression`. Accepts ints, floats,
 /// and existing `Expression` instances. Anything else is a `TypeError`.
-fn coerce_to_expression(obj: &Bound<'_, PyAny>) -> PyResult<ArithmosExpression> {
+fn coerce_to_expression(obj: &Bound<'_, PyAny>) -> PyResult<ArithmaExpression> {
     if let Ok(py_expr) = obj.extract::<PyRef<Expression>>() {
         return Ok(py_expr.inner.clone());
     }
     if let Ok(int_val) = obj.extract::<i64>() {
-        return Ok(ArithmosExpression::from_i64(int_val));
+        return Ok(ArithmaExpression::from_i64(int_val));
     }
     if let Ok(float_val) = obj.extract::<f64>() {
-        return Ok(ArithmosExpression::from_f64(float_val));
+        return Ok(ArithmaExpression::from_f64(float_val));
     }
     Err(PyTypeError::new_err(
         "Expected Expression, int, or float operand",
@@ -89,31 +89,31 @@ fn coerce_to_expression(obj: &Bound<'_, PyAny>) -> PyResult<ArithmosExpression> 
 // LaTeX walker.
 // ============================================================================
 
-/// Render an `ArithmosExpression` as a LaTeX string. Walks the tree iteratively
+/// Render an `ArithmaExpression` as a LaTeX string. Walks the tree iteratively
 /// to keep the safety-critical "avoid recursion" rule (CLAUDE.md §4) intact for
 /// pathological inputs. Wraps subexpressions in `\left(\right)` when operator
 /// precedence demands it.
-fn expression_to_latex(expr: &ArithmosExpression) -> String {
+fn expression_to_latex(expr: &ArithmaExpression) -> String {
     // Precedence ranking — higher binds tighter. Used to decide when to add
     // parentheses around a child of a binary operator. Matches standard math
     // typesetting conventions.
-    fn precedence(expr: &ArithmosExpression) -> u8 {
+    fn precedence(expr: &ArithmaExpression) -> u8 {
         match expr {
-            ArithmosExpression::Number(_)
-            | ArithmosExpression::Constant { .. }
-            | ArithmosExpression::Variable(_) => 100,
-            ArithmosExpression::Function(func, _) => match func {
-                ArithmosFunction::Add | ArithmosFunction::Subtract => 10,
-                ArithmosFunction::Multiply | ArithmosFunction::Divide => 20,
-                ArithmosFunction::Negate => 25,
-                ArithmosFunction::Power | ArithmosFunction::Pow(_) => 30,
+            ArithmaExpression::Number(_)
+            | ArithmaExpression::Constant { .. }
+            | ArithmaExpression::Variable(_) => 100,
+            ArithmaExpression::Function(func, _) => match func {
+                ArithmaFunction::Add | ArithmaFunction::Subtract => 10,
+                ArithmaFunction::Multiply | ArithmaFunction::Divide => 20,
+                ArithmaFunction::Negate => 25,
+                ArithmaFunction::Power | ArithmaFunction::Pow(_) => 30,
                 _ => 90, // unary functions like sin/cos/exp don't need outer parens
             },
             _ => 50,
         }
     }
 
-    fn wrap(child: &ArithmosExpression, min_prec: u8) -> String {
+    fn wrap(child: &ArithmaExpression, min_prec: u8) -> String {
         let s = expression_to_latex(child);
         if precedence(child) < min_prec {
             format!("\\left({}\\right)", s)
@@ -122,7 +122,7 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
         }
     }
 
-    fn fmt_number(n: &ArithmosInteger) -> String {
+    fn fmt_number(n: &ArithmaInteger) -> String {
         if n.value.is_nan() {
             return "\\text{NaN}".to_string();
         }
@@ -137,25 +137,25 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
         // For ordinary i64-range values this is exact; for larger we fall back to
         // the f64 conversion (which only loses precision past 2^53 anyway and the
         // Integer wrapper exposes the full byte vector for callers who care).
-        match arithmos_integer_to_decimal_string(n) {
+        match arithma_integer_to_decimal_string(n) {
             Some(s) => s,
             None => format!("{}", n.to_f64()),
         }
     }
 
     match expr {
-        ArithmosExpression::Number(n) => fmt_number(n),
-        ArithmosExpression::Constant { symbol, .. } => match symbol.as_str() {
+        ArithmaExpression::Number(n) => fmt_number(n),
+        ArithmaExpression::Constant { symbol, .. } => match symbol.as_str() {
             "pi" => "\\pi".to_string(),
             "e" => "e".to_string(),
             "tau" => "\\tau".to_string(),
             "phi" => "\\varphi".to_string(),
             other => other.to_string(),
         },
-        ArithmosExpression::Variable(name) => name.clone(),
-        ArithmosExpression::Function(func, args) => {
+        ArithmaExpression::Variable(name) => name.clone(),
+        ArithmaExpression::Function(func, args) => {
             match func {
-                ArithmosFunction::Add => {
+                ArithmaFunction::Add => {
                     if args.len() == 2 {
                         format!("{} + {}", wrap(&args[0], 10), wrap(&args[1], 10))
                     } else {
@@ -165,7 +165,7 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
                             .join(" + ")
                     }
                 }
-                ArithmosFunction::Subtract => {
+                ArithmaFunction::Subtract => {
                     if args.len() == 2 {
                         format!("{} - {}", wrap(&args[0], 10), wrap(&args[1], 11))
                     } else {
@@ -176,7 +176,7 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
                             .join(" - ")
                     }
                 }
-                ArithmosFunction::Multiply => {
+                ArithmaFunction::Multiply => {
                     if args.len() == 2 {
                         format!("{} \\cdot {}", wrap(&args[0], 20), wrap(&args[1], 20))
                     } else {
@@ -186,7 +186,7 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
                             .join(" \\cdot ")
                     }
                 }
-                ArithmosFunction::Divide => {
+                ArithmaFunction::Divide => {
                     if args.len() == 2 {
                         format!(
                             "\\frac{{{}}}{{{}}}",
@@ -197,7 +197,7 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
                         "\\text{div?}".to_string()
                     }
                 }
-                ArithmosFunction::Power => {
+                ArithmaFunction::Power => {
                     if args.len() == 2 {
                         format!(
                             "{}^{{{}}}",
@@ -208,51 +208,51 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
                         "\\text{pow?}".to_string()
                     }
                 }
-                ArithmosFunction::Negate => {
+                ArithmaFunction::Negate => {
                     if args.len() == 1 {
                         format!("-{}", wrap(&args[0], 25))
                     } else {
                         "\\text{neg?}".to_string()
                     }
                 }
-                ArithmosFunction::Sqrt => {
+                ArithmaFunction::Sqrt => {
                     if args.len() == 1 {
                         format!("\\sqrt{{{}}}", expression_to_latex(&args[0]))
                     } else {
                         "\\text{sqrt?}".to_string()
                     }
                 }
-                ArithmosFunction::Cbrt => {
+                ArithmaFunction::Cbrt => {
                     if args.len() == 1 {
                         format!("\\sqrt[3]{{{}}}", expression_to_latex(&args[0]))
                     } else {
                         "\\text{cbrt?}".to_string()
                     }
                 }
-                ArithmosFunction::Exp => {
+                ArithmaFunction::Exp => {
                     if args.len() == 1 {
                         format!("e^{{{}}}", expression_to_latex(&args[0]))
                     } else {
                         "\\text{exp?}".to_string()
                     }
                 }
-                ArithmosFunction::Ln => unary_function("\\ln", args),
-                ArithmosFunction::Log => unary_function("\\log", args),
-                ArithmosFunction::Log10 => unary_function("\\log_{10}", args),
-                ArithmosFunction::Log2 => unary_function("\\log_{2}", args),
-                ArithmosFunction::Sin => unary_function("\\sin", args),
-                ArithmosFunction::Cos => unary_function("\\cos", args),
-                ArithmosFunction::Tan => unary_function("\\tan", args),
-                ArithmosFunction::Cot => unary_function("\\cot", args),
-                ArithmosFunction::Sec => unary_function("\\sec", args),
-                ArithmosFunction::Csc => unary_function("\\csc", args),
-                ArithmosFunction::Asin => unary_function("\\arcsin", args),
-                ArithmosFunction::Acos => unary_function("\\arccos", args),
-                ArithmosFunction::Atan => unary_function("\\arctan", args),
-                ArithmosFunction::Sinh => unary_function("\\sinh", args),
-                ArithmosFunction::Cosh => unary_function("\\cosh", args),
-                ArithmosFunction::Tanh => unary_function("\\tanh", args),
-                ArithmosFunction::Abs => {
+                ArithmaFunction::Ln => unary_function("\\ln", args),
+                ArithmaFunction::Log => unary_function("\\log", args),
+                ArithmaFunction::Log10 => unary_function("\\log_{10}", args),
+                ArithmaFunction::Log2 => unary_function("\\log_{2}", args),
+                ArithmaFunction::Sin => unary_function("\\sin", args),
+                ArithmaFunction::Cos => unary_function("\\cos", args),
+                ArithmaFunction::Tan => unary_function("\\tan", args),
+                ArithmaFunction::Cot => unary_function("\\cot", args),
+                ArithmaFunction::Sec => unary_function("\\sec", args),
+                ArithmaFunction::Csc => unary_function("\\csc", args),
+                ArithmaFunction::Asin => unary_function("\\arcsin", args),
+                ArithmaFunction::Acos => unary_function("\\arccos", args),
+                ArithmaFunction::Atan => unary_function("\\arctan", args),
+                ArithmaFunction::Sinh => unary_function("\\sinh", args),
+                ArithmaFunction::Cosh => unary_function("\\cosh", args),
+                ArithmaFunction::Tanh => unary_function("\\tanh", args),
+                ArithmaFunction::Abs => {
                     if args.len() == 1 {
                         format!("\\left|{}\\right|", expression_to_latex(&args[0]))
                     } else {
@@ -270,7 +270,7 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
                 }
             }
         }
-        ArithmosExpression::Sum {
+        ArithmaExpression::Sum {
             variable,
             start,
             end,
@@ -282,7 +282,7 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
             expression_to_latex(end),
             expression_to_latex(expression)
         ),
-        ArithmosExpression::Product {
+        ArithmaExpression::Product {
             variable,
             start,
             end,
@@ -294,7 +294,7 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
             expression_to_latex(end),
             expression_to_latex(expression)
         ),
-        ArithmosExpression::Limit {
+        ArithmaExpression::Limit {
             variable,
             approaching,
             expression,
@@ -305,7 +305,7 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
             expression_to_latex(approaching),
             expression_to_latex(expression)
         ),
-        ArithmosExpression::Conditional {
+        ArithmaExpression::Conditional {
             condition,
             then_expr,
             else_expr,
@@ -315,12 +315,12 @@ fn expression_to_latex(expr: &ArithmosExpression) -> String {
             expression_to_latex(condition),
             expression_to_latex(else_expr)
         ),
-        ArithmosExpression::CachedValue { expr, .. } => expression_to_latex(expr),
-        ArithmosExpression::FourierOptimized { expr, .. } => expression_to_latex(expr),
+        ArithmaExpression::CachedValue { expr, .. } => expression_to_latex(expr),
+        ArithmaExpression::FourierOptimized { expr, .. } => expression_to_latex(expr),
     }
 }
 
-fn unary_function(name: &str, args: &[ArithmosExpression]) -> String {
+fn unary_function(name: &str, args: &[ArithmaExpression]) -> String {
     if args.len() == 1 {
         format!("{}\\left({}\\right)", name, expression_to_latex(&args[0]))
     } else {
@@ -332,9 +332,9 @@ fn unary_function(name: &str, args: &[ArithmosExpression]) -> String {
 // Arbitrary-precision integer ↔ Python int.
 // ============================================================================
 
-/// Convert an `ArithmosInteger`'s little-endian byte vector into a base-10
+/// Convert an `ArithmaInteger`'s little-endian byte vector into a base-10
 /// string. Returns `None` for NaN / infinity (the caller handles those).
-fn arithmos_integer_to_decimal_string(n: &ArithmosInteger) -> Option<String> {
+fn arithma_integer_to_decimal_string(n: &ArithmaInteger) -> Option<String> {
     if n.value.is_nan() || n.value.is_infinity() {
         return None;
     }
@@ -380,9 +380,9 @@ fn arithmos_integer_to_decimal_string(n: &ArithmosInteger) -> Option<String> {
     Some(out)
 }
 
-/// Construct an `ArithmosInternalInteger` from a decimal string. Handles a
+/// Construct an `ArithmaInternalInteger` from a decimal string. Handles a
 /// leading sign and rejects empty / non-digit inputs.
-fn arithmos_integer_from_decimal_string(s: &str) -> Result<ArithmosInteger, String> {
+fn arithma_integer_from_decimal_string(s: &str) -> Result<ArithmaInteger, String> {
     let trimmed = s.trim();
     if trimmed.is_empty() {
         return Err("empty integer string".to_string());
@@ -421,8 +421,8 @@ fn arithmos_integer_from_decimal_string(s: &str) -> Result<ArithmosInteger, Stri
             flags |= flag::NEGATIVE;
         }
     }
-    Ok(ArithmosInteger {
-        value: ArithmosInternalInteger {
+    Ok(ArithmaInteger {
+        value: ArithmaInternalInteger {
             flags,
             value: bytes,
         },
@@ -448,101 +448,101 @@ fn arithmos_integer_from_decimal_string(s: &str) -> Result<ArithmosInteger, Stri
 // The format is intentionally lossless for the variants emitted by
 // `formulas.json`'s `arithma_compact` payload and round-trips back to a live
 // `Expression` for client-side evaluation. Variants with no natural compact
-// form (CachedValue, FourierOptimized, Function carrying inner `ArithmosInteger`
+// form (CachedValue, FourierOptimized, Function carrying inner `ArithmaInteger`
 // such as Pow(n) or LogBase(n), the calculus / numerical-method operators, …)
 // are flattened: CachedValue / FourierOptimized are serialised as their wrapped
 // expression; unsupported operators raise `ValueError` from `from_compact`.
 
-/// Map an `ArithmosFunction` to its compact-form tag string. Returns `None` for
+/// Map an `ArithmaFunction` to its compact-form tag string. Returns `None` for
 /// operator variants we cannot losslessly express in the compact schema (e.g.
-/// `Pow(ArithmosInteger)`, calculus / numerical-method nodes that carry inner
+/// `Pow(ArithmaInteger)`, calculus / numerical-method nodes that carry inner
 /// expressions or per-variant payload). Callers that hit a `None` fall back to
 /// serialising the operator's `Debug` name and emit a generic `"fn"` node — but
 /// `from_compact` will refuse to inflate those.
-fn function_tag(func: &ArithmosFunction) -> Option<&'static str> {
+fn function_tag(func: &ArithmaFunction) -> Option<&'static str> {
     match func {
-        ArithmosFunction::Add => Some("add"),
-        ArithmosFunction::Subtract => Some("sub"),
-        ArithmosFunction::Multiply => Some("mul"),
-        ArithmosFunction::Divide => Some("div"),
-        ArithmosFunction::Power => Some("pow"),
-        ArithmosFunction::Negate => Some("neg"),
-        ArithmosFunction::Sqrt => Some("sqrt"),
-        ArithmosFunction::Cbrt => Some("cbrt"),
-        ArithmosFunction::Exp => Some("exp"),
-        ArithmosFunction::Ln => Some("ln"),
-        ArithmosFunction::Log => Some("log"),
-        ArithmosFunction::Log10 => Some("log10"),
-        ArithmosFunction::Log2 => Some("log2"),
-        ArithmosFunction::Sin => Some("sin"),
-        ArithmosFunction::Cos => Some("cos"),
-        ArithmosFunction::Tan => Some("tan"),
-        ArithmosFunction::Cot => Some("cot"),
-        ArithmosFunction::Sec => Some("sec"),
-        ArithmosFunction::Csc => Some("csc"),
-        ArithmosFunction::Asin => Some("asin"),
-        ArithmosFunction::Acos => Some("acos"),
-        ArithmosFunction::Atan => Some("atan"),
-        ArithmosFunction::Sinh => Some("sinh"),
-        ArithmosFunction::Cosh => Some("cosh"),
-        ArithmosFunction::Tanh => Some("tanh"),
-        ArithmosFunction::Abs => Some("abs"),
-        ArithmosFunction::Sign => Some("sign"),
-        ArithmosFunction::Floor => Some("floor"),
-        ArithmosFunction::Ceil => Some("ceil"),
-        ArithmosFunction::Round => Some("round"),
-        ArithmosFunction::Gamma => Some("gamma"),
-        ArithmosFunction::Erf => Some("erf"),
-        ArithmosFunction::Factorial => Some("factorial"),
+        ArithmaFunction::Add => Some("add"),
+        ArithmaFunction::Subtract => Some("sub"),
+        ArithmaFunction::Multiply => Some("mul"),
+        ArithmaFunction::Divide => Some("div"),
+        ArithmaFunction::Power => Some("pow"),
+        ArithmaFunction::Negate => Some("neg"),
+        ArithmaFunction::Sqrt => Some("sqrt"),
+        ArithmaFunction::Cbrt => Some("cbrt"),
+        ArithmaFunction::Exp => Some("exp"),
+        ArithmaFunction::Ln => Some("ln"),
+        ArithmaFunction::Log => Some("log"),
+        ArithmaFunction::Log10 => Some("log10"),
+        ArithmaFunction::Log2 => Some("log2"),
+        ArithmaFunction::Sin => Some("sin"),
+        ArithmaFunction::Cos => Some("cos"),
+        ArithmaFunction::Tan => Some("tan"),
+        ArithmaFunction::Cot => Some("cot"),
+        ArithmaFunction::Sec => Some("sec"),
+        ArithmaFunction::Csc => Some("csc"),
+        ArithmaFunction::Asin => Some("asin"),
+        ArithmaFunction::Acos => Some("acos"),
+        ArithmaFunction::Atan => Some("atan"),
+        ArithmaFunction::Sinh => Some("sinh"),
+        ArithmaFunction::Cosh => Some("cosh"),
+        ArithmaFunction::Tanh => Some("tanh"),
+        ArithmaFunction::Abs => Some("abs"),
+        ArithmaFunction::Sign => Some("sign"),
+        ArithmaFunction::Floor => Some("floor"),
+        ArithmaFunction::Ceil => Some("ceil"),
+        ArithmaFunction::Round => Some("round"),
+        ArithmaFunction::Gamma => Some("gamma"),
+        ArithmaFunction::Erf => Some("erf"),
+        ArithmaFunction::Factorial => Some("factorial"),
         _ => None,
     }
 }
 
-/// Inverse of [`function_tag`] — map a compact tag back to its `ArithmosFunction`
+/// Inverse of [`function_tag`] — map a compact tag back to its `ArithmaFunction`
 /// variant. Variants requiring inner payload (e.g. `Pow(n)`, calculus operators,
 /// `LogBase(n)`) are intentionally unsupported.
-fn function_from_tag(tag: &str) -> Option<ArithmosFunction> {
+fn function_from_tag(tag: &str) -> Option<ArithmaFunction> {
     Some(match tag {
-        "add" => ArithmosFunction::Add,
-        "sub" => ArithmosFunction::Subtract,
-        "mul" => ArithmosFunction::Multiply,
-        "div" => ArithmosFunction::Divide,
-        "pow" => ArithmosFunction::Power,
-        "neg" => ArithmosFunction::Negate,
-        "sqrt" => ArithmosFunction::Sqrt,
-        "cbrt" => ArithmosFunction::Cbrt,
-        "exp" => ArithmosFunction::Exp,
-        "ln" => ArithmosFunction::Ln,
-        "log" => ArithmosFunction::Log,
-        "log10" => ArithmosFunction::Log10,
-        "log2" => ArithmosFunction::Log2,
-        "sin" => ArithmosFunction::Sin,
-        "cos" => ArithmosFunction::Cos,
-        "tan" => ArithmosFunction::Tan,
-        "cot" => ArithmosFunction::Cot,
-        "sec" => ArithmosFunction::Sec,
-        "csc" => ArithmosFunction::Csc,
-        "asin" => ArithmosFunction::Asin,
-        "acos" => ArithmosFunction::Acos,
-        "atan" => ArithmosFunction::Atan,
-        "sinh" => ArithmosFunction::Sinh,
-        "cosh" => ArithmosFunction::Cosh,
-        "tanh" => ArithmosFunction::Tanh,
-        "abs" => ArithmosFunction::Abs,
-        "sign" => ArithmosFunction::Sign,
-        "floor" => ArithmosFunction::Floor,
-        "ceil" => ArithmosFunction::Ceil,
-        "round" => ArithmosFunction::Round,
-        "gamma" => ArithmosFunction::Gamma,
-        "erf" => ArithmosFunction::Erf,
-        "factorial" => ArithmosFunction::Factorial,
+        "add" => ArithmaFunction::Add,
+        "sub" => ArithmaFunction::Subtract,
+        "mul" => ArithmaFunction::Multiply,
+        "div" => ArithmaFunction::Divide,
+        "pow" => ArithmaFunction::Power,
+        "neg" => ArithmaFunction::Negate,
+        "sqrt" => ArithmaFunction::Sqrt,
+        "cbrt" => ArithmaFunction::Cbrt,
+        "exp" => ArithmaFunction::Exp,
+        "ln" => ArithmaFunction::Ln,
+        "log" => ArithmaFunction::Log,
+        "log10" => ArithmaFunction::Log10,
+        "log2" => ArithmaFunction::Log2,
+        "sin" => ArithmaFunction::Sin,
+        "cos" => ArithmaFunction::Cos,
+        "tan" => ArithmaFunction::Tan,
+        "cot" => ArithmaFunction::Cot,
+        "sec" => ArithmaFunction::Sec,
+        "csc" => ArithmaFunction::Csc,
+        "asin" => ArithmaFunction::Asin,
+        "acos" => ArithmaFunction::Acos,
+        "atan" => ArithmaFunction::Atan,
+        "sinh" => ArithmaFunction::Sinh,
+        "cosh" => ArithmaFunction::Cosh,
+        "tanh" => ArithmaFunction::Tanh,
+        "abs" => ArithmaFunction::Abs,
+        "sign" => ArithmaFunction::Sign,
+        "floor" => ArithmaFunction::Floor,
+        "ceil" => ArithmaFunction::Ceil,
+        "round" => ArithmaFunction::Round,
+        "gamma" => ArithmaFunction::Gamma,
+        "erf" => ArithmaFunction::Erf,
+        "factorial" => ArithmaFunction::Factorial,
         _ => return None,
     })
 }
 
-/// Serialise an `ArithmosInteger` literal to its compact string form. Handles
+/// Serialise an `ArithmaInteger` literal to its compact string form. Handles
 /// NaN / ±Infinity as sentinel strings so the JSON round-trip is unambiguous.
-fn integer_to_compact_string(n: &ArithmosInteger) -> String {
+fn integer_to_compact_string(n: &ArithmaInteger) -> String {
     if n.value.is_nan() {
         return "NaN".to_string();
     }
@@ -553,38 +553,38 @@ fn integer_to_compact_string(n: &ArithmosInteger) -> String {
             "Inf".to_string()
         };
     }
-    arithmos_integer_to_decimal_string(n).unwrap_or_else(|| format!("{}", n.to_f64()))
+    arithma_integer_to_decimal_string(n).unwrap_or_else(|| format!("{}", n.to_f64()))
 }
 
 /// Inverse of [`integer_to_compact_string`].
-fn integer_from_compact_string(s: &str) -> Result<ArithmosInteger, String> {
+fn integer_from_compact_string(s: &str) -> Result<ArithmaInteger, String> {
     match s {
-        "NaN" => Ok(ArithmosInteger::nan()),
-        "Inf" | "+Inf" => Ok(ArithmosInteger::infinity()),
+        "NaN" => Ok(ArithmaInteger::nan()),
+        "Inf" | "+Inf" => Ok(ArithmaInteger::infinity()),
         "-Inf" => {
-            let mut inf = ArithmosInteger::infinity();
+            let mut inf = ArithmaInteger::infinity();
             inf.value.set_negative(true);
             Ok(inf)
         }
-        other => arithmos_integer_from_decimal_string(other),
+        other => arithma_integer_from_decimal_string(other),
     }
 }
 
-/// Build the compact-form Python list for an `ArithmosExpression`.
-fn expression_to_compact_py(py: Python<'_>, expr: &ArithmosExpression) -> PyResult<PyObject> {
+/// Build the compact-form Python list for an `ArithmaExpression`.
+fn expression_to_compact_py(py: Python<'_>, expr: &ArithmaExpression) -> PyResult<PyObject> {
     match expr {
-        ArithmosExpression::Number(n) => {
+        ArithmaExpression::Number(n) => {
             let lst = PyList::new_bound(
                 py,
                 &["num".into_py(py), integer_to_compact_string(n).into_py(py)],
             );
             Ok(lst.into())
         }
-        ArithmosExpression::Variable(name) => {
+        ArithmaExpression::Variable(name) => {
             let lst = PyList::new_bound(py, &["var".into_py(py), name.clone().into_py(py)]);
             Ok(lst.into())
         }
-        ArithmosExpression::Constant {
+        ArithmaExpression::Constant {
             symbol,
             cached_value,
             ..
@@ -599,7 +599,7 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmosExpression) -> PyResu
             );
             Ok(lst.into())
         }
-        ArithmosExpression::Function(func, args) => {
+        ArithmaExpression::Function(func, args) => {
             let tag = function_tag(func).ok_or_else(|| {
                 PyValueError::new_err(format!(
                     "Expression.to_compact: operator {:?} is not supported by the compact schema",
@@ -614,7 +614,7 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmosExpression) -> PyResu
             }
             Ok(items.into())
         }
-        ArithmosExpression::Sum {
+        ArithmaExpression::Sum {
             variable,
             start,
             end,
@@ -628,7 +628,7 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmosExpression) -> PyResu
             items.append(expression_to_compact_py(py, expression)?)?;
             Ok(items.into())
         }
-        ArithmosExpression::Product {
+        ArithmaExpression::Product {
             variable,
             start,
             end,
@@ -642,7 +642,7 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmosExpression) -> PyResu
             items.append(expression_to_compact_py(py, expression)?)?;
             Ok(items.into())
         }
-        ArithmosExpression::Limit {
+        ArithmaExpression::Limit {
             variable,
             approaching,
             expression,
@@ -656,7 +656,7 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmosExpression) -> PyResu
             items.append(*from_right)?;
             Ok(items.into())
         }
-        ArithmosExpression::Conditional {
+        ArithmaExpression::Conditional {
             condition,
             then_expr,
             else_expr,
@@ -670,14 +670,14 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmosExpression) -> PyResu
         }
         // Performance-cache wrappers serialise as their underlying expression —
         // the cache state is rebuilt on demand by the engine.
-        ArithmosExpression::CachedValue { expr, .. }
-        | ArithmosExpression::FourierOptimized { expr, .. } => expression_to_compact_py(py, expr),
+        ArithmaExpression::CachedValue { expr, .. }
+        | ArithmaExpression::FourierOptimized { expr, .. } => expression_to_compact_py(py, expr),
     }
 }
 
 /// Inverse of [`expression_to_compact_py`]. Walks a Python list/tuple matching
-/// the compact schema and reconstructs the corresponding `ArithmosExpression`.
-fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpression> {
+/// the compact schema and reconstructs the corresponding `ArithmaExpression`.
+fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmaExpression> {
     let lst: Bound<'_, PyList> = blob.downcast::<PyList>().map(|l| l.clone()).or_else(|_| {
         // Allow tuples too — JSON round-trip from Python typically yields lists,
         // but tuples are equally natural to write at the call site.
@@ -705,7 +705,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
             }
             let s: String = lst.get_item(1)?.extract()?;
             let n = integer_from_compact_string(&s).map_err(PyValueError::new_err)?;
-            Ok(ArithmosExpression::Number(n))
+            Ok(ArithmaExpression::Number(n))
         }
         "var" => {
             if lst.len() != 2 {
@@ -714,7 +714,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
                 ));
             }
             let name: String = lst.get_item(1)?.extract()?;
-            Ok(ArithmosExpression::Variable(name))
+            Ok(ArithmaExpression::Variable(name))
         }
         "const" => {
             if lst.len() != 3 {
@@ -729,7 +729,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
             } else {
                 Some(val_item.extract()?)
             };
-            Ok(ArithmosExpression::constant(&symbol, None, cached, true))
+            Ok(ArithmaExpression::constant(&symbol, None, cached, true))
         }
         "fn" => {
             if lst.len() < 2 {
@@ -744,11 +744,11 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
                     op_tag
                 ))
             })?;
-            let mut args: Vec<ArithmosExpression> = Vec::with_capacity(lst.len() - 2);
+            let mut args: Vec<ArithmaExpression> = Vec::with_capacity(lst.len() - 2);
             for i in 2..lst.len() {
                 args.push(expression_from_compact_py(&lst.get_item(i)?)?);
             }
-            Ok(ArithmosExpression::Function(func, args))
+            Ok(ArithmaExpression::Function(func, args))
         }
         "sum" => {
             if lst.len() != 5 {
@@ -760,7 +760,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
             let start = expression_from_compact_py(&lst.get_item(2)?)?;
             let end = expression_from_compact_py(&lst.get_item(3)?)?;
             let body = expression_from_compact_py(&lst.get_item(4)?)?;
-            Ok(ArithmosExpression::Sum {
+            Ok(ArithmaExpression::Sum {
                 variable,
                 start: Box::new(start),
                 end: Box::new(end),
@@ -777,7 +777,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
             let start = expression_from_compact_py(&lst.get_item(2)?)?;
             let end = expression_from_compact_py(&lst.get_item(3)?)?;
             let body = expression_from_compact_py(&lst.get_item(4)?)?;
-            Ok(ArithmosExpression::Product {
+            Ok(ArithmaExpression::Product {
                 variable,
                 start: Box::new(start),
                 end: Box::new(end),
@@ -794,7 +794,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
             let approaching = expression_from_compact_py(&lst.get_item(2)?)?;
             let body = expression_from_compact_py(&lst.get_item(3)?)?;
             let from_right: bool = lst.get_item(4)?.extract()?;
-            Ok(ArithmosExpression::Limit {
+            Ok(ArithmaExpression::Limit {
                 variable,
                 approaching: Box::new(approaching),
                 expression: Box::new(body),
@@ -810,7 +810,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
             let condition = expression_from_compact_py(&lst.get_item(1)?)?;
             let then_expr = expression_from_compact_py(&lst.get_item(2)?)?;
             let else_expr = expression_from_compact_py(&lst.get_item(3)?)?;
-            Ok(ArithmosExpression::Conditional {
+            Ok(ArithmaExpression::Conditional {
                 condition: Box::new(condition),
                 then_expr: Box::new(then_expr),
                 else_expr: Box::new(else_expr),
@@ -827,15 +827,15 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmosExpre
 // `Expression` pyclass.
 // ============================================================================
 
-/// Symbolic expression — Python wrapper around `ArithmosExpression`.
+/// Symbolic expression — Python wrapper around `ArithmaExpression`.
 #[pyclass(name = "Expression", module = "arithma")]
 #[derive(Clone)]
 pub struct Expression {
-    pub(crate) inner: ArithmosExpression,
+    pub(crate) inner: ArithmaExpression,
 }
 
 impl Expression {
-    fn from_inner(inner: ArithmosExpression) -> Self {
+    fn from_inner(inner: ArithmaExpression) -> Self {
         Self { inner }
     }
 }
@@ -845,7 +845,7 @@ impl Expression {
     /// Construct an `Expression` wrapping a variable name.
     #[staticmethod]
     fn variable(name: &str) -> Self {
-        Self::from_inner(ArithmosExpression::var(name))
+        Self::from_inner(ArithmaExpression::var(name))
     }
 
     /// Construct an `Expression` wrapping a numeric literal. Accepts `int` or
@@ -859,10 +859,10 @@ impl Expression {
             ));
         }
         if let Ok(int_val) = value.extract::<i64>() {
-            return Ok(Self::from_inner(ArithmosExpression::from_i64(int_val)));
+            return Ok(Self::from_inner(ArithmaExpression::from_i64(int_val)));
         }
         if let Ok(float_val) = value.extract::<f64>() {
-            return Ok(Self::from_inner(ArithmosExpression::from_f64(float_val)));
+            return Ok(Self::from_inner(ArithmaExpression::from_f64(float_val)));
         }
         Err(PyTypeError::new_err(
             "Expression.number expects int or float",
@@ -873,14 +873,14 @@ impl Expression {
     #[staticmethod]
     #[pyo3(signature = (symbol, value = None))]
     fn constant(symbol: &str, value: Option<f64>) -> Self {
-        Self::from_inner(ArithmosExpression::constant(symbol, None, value, true))
+        Self::from_inner(ArithmaExpression::constant(symbol, None, value, true))
     }
 
     // -------- algebra builders (functional form) --------
 
     fn add(&self, other: &Bound<'_, PyAny>) -> PyResult<Self> {
         let rhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::add(
+        Ok(Self::from_inner(ArithmaExpression::add(
             self.inner.clone(),
             rhs,
         )))
@@ -888,7 +888,7 @@ impl Expression {
 
     fn sub(&self, other: &Bound<'_, PyAny>) -> PyResult<Self> {
         let rhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::sub(
+        Ok(Self::from_inner(ArithmaExpression::sub(
             self.inner.clone(),
             rhs,
         )))
@@ -896,7 +896,7 @@ impl Expression {
 
     fn mul(&self, other: &Bound<'_, PyAny>) -> PyResult<Self> {
         let rhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::mul(
+        Ok(Self::from_inner(ArithmaExpression::mul(
             self.inner.clone(),
             rhs,
         )))
@@ -904,7 +904,7 @@ impl Expression {
 
     fn div(&self, other: &Bound<'_, PyAny>) -> PyResult<Self> {
         let rhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::div(
+        Ok(Self::from_inner(ArithmaExpression::div(
             self.inner.clone(),
             rhs,
         )))
@@ -912,14 +912,14 @@ impl Expression {
 
     fn pow_(&self, other: &Bound<'_, PyAny>) -> PyResult<Self> {
         let rhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::pow(
+        Ok(Self::from_inner(ArithmaExpression::pow(
             self.inner.clone(),
             rhs,
         )))
     }
 
     fn neg(&self) -> Self {
-        Self::from_inner(ArithmosExpression::neg(self.inner.clone()))
+        Self::from_inner(ArithmaExpression::neg(self.inner.clone()))
     }
 
     // -------- transcendentals --------
@@ -927,37 +927,37 @@ impl Expression {
     #[staticmethod]
     fn sin(arg: &Bound<'_, PyAny>) -> PyResult<Self> {
         let inner = coerce_to_expression(arg)?;
-        Ok(Self::from_inner(ArithmosExpression::sin(inner)))
+        Ok(Self::from_inner(ArithmaExpression::sin(inner)))
     }
 
     #[staticmethod]
     fn cos(arg: &Bound<'_, PyAny>) -> PyResult<Self> {
         let inner = coerce_to_expression(arg)?;
-        Ok(Self::from_inner(ArithmosExpression::cos(inner)))
+        Ok(Self::from_inner(ArithmaExpression::cos(inner)))
     }
 
     #[staticmethod]
     fn tan(arg: &Bound<'_, PyAny>) -> PyResult<Self> {
         let inner = coerce_to_expression(arg)?;
-        Ok(Self::from_inner(ArithmosExpression::tan(inner)))
+        Ok(Self::from_inner(ArithmaExpression::tan(inner)))
     }
 
     #[staticmethod]
     fn exp(arg: &Bound<'_, PyAny>) -> PyResult<Self> {
         let inner = coerce_to_expression(arg)?;
-        Ok(Self::from_inner(ArithmosExpression::exp(inner)))
+        Ok(Self::from_inner(ArithmaExpression::exp(inner)))
     }
 
     #[staticmethod]
     fn ln(arg: &Bound<'_, PyAny>) -> PyResult<Self> {
         let inner = coerce_to_expression(arg)?;
-        Ok(Self::from_inner(ArithmosExpression::ln(inner)))
+        Ok(Self::from_inner(ArithmaExpression::ln(inner)))
     }
 
     #[staticmethod]
     fn sqrt(arg: &Bound<'_, PyAny>) -> PyResult<Self> {
         let inner = coerce_to_expression(arg)?;
-        Ok(Self::from_inner(ArithmosExpression::sqrt(inner)))
+        Ok(Self::from_inner(ArithmaExpression::sqrt(inner)))
     }
 
     // -------- Python operator dunder methods --------
@@ -968,7 +968,7 @@ impl Expression {
 
     fn __radd__(&self, other: &Bound<'_, PyAny>) -> PyResult<Self> {
         let lhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::add(
+        Ok(Self::from_inner(ArithmaExpression::add(
             lhs,
             self.inner.clone(),
         )))
@@ -980,7 +980,7 @@ impl Expression {
 
     fn __rsub__(&self, other: &Bound<'_, PyAny>) -> PyResult<Self> {
         let lhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::sub(
+        Ok(Self::from_inner(ArithmaExpression::sub(
             lhs,
             self.inner.clone(),
         )))
@@ -992,7 +992,7 @@ impl Expression {
 
     fn __rmul__(&self, other: &Bound<'_, PyAny>) -> PyResult<Self> {
         let lhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::mul(
+        Ok(Self::from_inner(ArithmaExpression::mul(
             lhs,
             self.inner.clone(),
         )))
@@ -1004,7 +1004,7 @@ impl Expression {
 
     fn __rtruediv__(&self, other: &Bound<'_, PyAny>) -> PyResult<Self> {
         let lhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::div(
+        Ok(Self::from_inner(ArithmaExpression::div(
             lhs,
             self.inner.clone(),
         )))
@@ -1026,7 +1026,7 @@ impl Expression {
         _modulo: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
         let lhs = coerce_to_expression(other)?;
-        Ok(Self::from_inner(ArithmosExpression::pow(
+        Ok(Self::from_inner(ArithmaExpression::pow(
             lhs,
             self.inner.clone(),
         )))
@@ -1042,7 +1042,7 @@ impl Expression {
     /// Raises `KeyError` for unbound variables and `RuntimeError` for any
     /// other failure (division by zero, unsupported operator, ...).
     fn evaluate(&self, env: &Bound<'_, PyDict>) -> PyResult<f64> {
-        let mut bindings: ArithmosBindings = ArithmosBindings::new();
+        let mut bindings: ArithmaBindings = ArithmaBindings::new();
         for (key, val) in env.iter() {
             let k: String = key
                 .extract()
@@ -1073,17 +1073,17 @@ impl Expression {
     /// dependency-graph walking.
     fn children(&self) -> Vec<Expression> {
         match &self.inner {
-            ArithmosExpression::Function(_, args) => args
+            ArithmaExpression::Function(_, args) => args
                 .iter()
                 .map(|a| Expression::from_inner(a.clone()))
                 .collect(),
-            ArithmosExpression::Sum {
+            ArithmaExpression::Sum {
                 start,
                 end,
                 expression,
                 ..
             }
-            | ArithmosExpression::Product {
+            | ArithmaExpression::Product {
                 start,
                 end,
                 expression,
@@ -1093,7 +1093,7 @@ impl Expression {
                 Expression::from_inner(*end.clone()),
                 Expression::from_inner(*expression.clone()),
             ],
-            ArithmosExpression::Limit {
+            ArithmaExpression::Limit {
                 approaching,
                 expression,
                 ..
@@ -1101,7 +1101,7 @@ impl Expression {
                 Expression::from_inner(*approaching.clone()),
                 Expression::from_inner(*expression.clone()),
             ],
-            ArithmosExpression::Conditional {
+            ArithmaExpression::Conditional {
                 condition,
                 then_expr,
                 else_expr,
@@ -1110,14 +1110,14 @@ impl Expression {
                 Expression::from_inner(*then_expr.clone()),
                 Expression::from_inner(*else_expr.clone()),
             ],
-            ArithmosExpression::CachedValue { expr, .. }
-            | ArithmosExpression::FourierOptimized { expr, .. } => {
+            ArithmaExpression::CachedValue { expr, .. }
+            | ArithmaExpression::FourierOptimized { expr, .. } => {
                 vec![Expression::from_inner(*expr.clone())]
             }
             // Leaf nodes have no children.
-            ArithmosExpression::Number(_)
-            | ArithmosExpression::Constant { .. }
-            | ArithmosExpression::Variable(_) => Vec::new(),
+            ArithmaExpression::Number(_)
+            | ArithmaExpression::Constant { .. }
+            | ArithmaExpression::Variable(_) => Vec::new(),
         }
     }
 
@@ -1169,16 +1169,16 @@ impl Expression {
     /// "constant", "function:Sin", ...).
     fn kind(&self) -> String {
         match &self.inner {
-            ArithmosExpression::Number(_) => "number".into(),
-            ArithmosExpression::Variable(_) => "variable".into(),
-            ArithmosExpression::Constant { .. } => "constant".into(),
-            ArithmosExpression::Function(f, _) => format!("function:{:?}", f),
-            ArithmosExpression::Sum { .. } => "sum".into(),
-            ArithmosExpression::Product { .. } => "product".into(),
-            ArithmosExpression::Limit { .. } => "limit".into(),
-            ArithmosExpression::Conditional { .. } => "conditional".into(),
-            ArithmosExpression::CachedValue { .. } => "cached".into(),
-            ArithmosExpression::FourierOptimized { .. } => "fourier".into(),
+            ArithmaExpression::Number(_) => "number".into(),
+            ArithmaExpression::Variable(_) => "variable".into(),
+            ArithmaExpression::Constant { .. } => "constant".into(),
+            ArithmaExpression::Function(f, _) => format!("function:{:?}", f),
+            ArithmaExpression::Sum { .. } => "sum".into(),
+            ArithmaExpression::Product { .. } => "product".into(),
+            ArithmaExpression::Limit { .. } => "limit".into(),
+            ArithmaExpression::Conditional { .. } => "conditional".into(),
+            ArithmaExpression::CachedValue { .. } => "cached".into(),
+            ArithmaExpression::FourierOptimized { .. } => "fourier".into(),
         }
     }
 
@@ -1191,11 +1191,11 @@ impl Expression {
 // `Integer` pyclass.
 // ============================================================================
 
-/// Arbitrary-precision integer — Python wrapper around `ArithmosInteger`.
+/// Arbitrary-precision integer — Python wrapper around `ArithmaInteger`.
 #[pyclass(name = "Integer", module = "arithma")]
 #[derive(Clone)]
 pub struct Integer {
-    pub(crate) inner: ArithmosInteger,
+    pub(crate) inner: ArithmaInteger,
 }
 
 #[pymethods]
@@ -1210,7 +1210,7 @@ impl Integer {
             .map_err(|_| PyTypeError::new_err("Integer() expects int"))?
             .clone();
         let s: String = py_int.str()?.to_str()?.to_string();
-        let inner = arithmos_integer_from_decimal_string(&s).map_err(PyValueError::new_err)?;
+        let inner = arithma_integer_from_decimal_string(&s).map_err(PyValueError::new_err)?;
         Ok(Self { inner })
     }
 
@@ -1218,7 +1218,7 @@ impl Integer {
     #[staticmethod]
     fn from_str(s: &Bound<'_, PyString>) -> PyResult<Self> {
         let s_str: &str = s.to_str()?;
-        let inner = arithmos_integer_from_decimal_string(s_str).map_err(PyValueError::new_err)?;
+        let inner = arithma_integer_from_decimal_string(s_str).map_err(PyValueError::new_err)?;
         Ok(Self { inner })
     }
 
@@ -1226,7 +1226,7 @@ impl Integer {
     #[staticmethod]
     fn from_i64(value: i64) -> Self {
         Self {
-            inner: ArithmosInteger::from_i64(value),
+            inner: ArithmaInteger::from_i64(value),
         }
     }
 
@@ -1238,7 +1238,7 @@ impl Integer {
         if self.inner.value.is_infinity() {
             return Err(PyValueError::new_err("cannot convert infinity to int"));
         }
-        let dec = arithmos_integer_to_decimal_string(&self.inner)
+        let dec = arithma_integer_to_decimal_string(&self.inner)
             .ok_or_else(|| PyRuntimeError::new_err("integer is not finite"))?;
         // Parse via Python's int() so arbitrary precision survives.
         let builtins = py.import_bound("builtins")?;
@@ -1253,7 +1253,7 @@ impl Integer {
 
     /// Decimal string form.
     fn to_string(&self) -> String {
-        arithmos_integer_to_decimal_string(&self.inner)
+        arithma_integer_to_decimal_string(&self.inner)
             .unwrap_or_else(|| format!("{}", self.inner.to_f64()))
     }
 
@@ -1274,7 +1274,7 @@ impl Integer {
 // `Variable` pyclass.
 // ============================================================================
 
-/// Named variable — Python wrapper around `ArithmosVariable`.
+/// Named variable — Python wrapper around `ArithmaVariable`.
 ///
 /// `binding` keyword accepts:
 /// - `None` → free / unbound variable.
@@ -1283,7 +1283,7 @@ impl Integer {
 #[pyclass(name = "Variable", module = "arithma")]
 #[derive(Clone)]
 pub struct Variable {
-    pub(crate) inner: ArithmosVariable,
+    pub(crate) inner: ArithmaVariable,
 }
 
 #[pymethods]
@@ -1291,7 +1291,7 @@ impl Variable {
     #[new]
     #[pyo3(signature = (name, binding = None))]
     fn new(name: &str, binding: Option<&Bound<'_, PyAny>>) -> PyResult<Self> {
-        let mut v = ArithmosVariable::new(name);
+        let mut v = ArithmaVariable::new(name);
         if let Some(b) = binding {
             if b.is_none() {
                 // Explicit None → leave unbound.
@@ -1323,9 +1323,9 @@ impl Variable {
     /// `Expression`.
     fn binding<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         match &self.inner.value {
-            ArithmosVariableValue::Unbound => Ok(py.None().into_bound(py)),
-            ArithmosVariableValue::Float(f) => Ok(f.into_py(py).into_bound(py)),
-            ArithmosVariableValue::Symbolic(expr) => {
+            ArithmaVariableValue::Unbound => Ok(py.None().into_bound(py)),
+            ArithmaVariableValue::Float(f) => Ok(f.into_py(py).into_bound(py)),
+            ArithmaVariableValue::Symbolic(expr) => {
                 let py_expr = Expression::from_inner(*expr.clone());
                 Ok(Py::new(py, py_expr)?.into_bound(py).into_any())
             }
@@ -1335,7 +1335,7 @@ impl Variable {
     /// Set the binding (same semantics as the constructor's `binding` keyword).
     #[pyo3(signature = (binding=None))]
     fn set_binding(&mut self, binding: Option<&Bound<'_, PyAny>>) -> PyResult<()> {
-        let mut v = ArithmosVariable::new(self.inner.name.clone());
+        let mut v = ArithmaVariable::new(self.inner.name.clone());
         // Preserve unit/description.
         v.unit = self.inner.unit.clone();
         v.description = self.inner.description.clone();
@@ -1358,18 +1358,18 @@ impl Variable {
 
     /// Lift the variable to an `Expression` (uses its name as a free symbol).
     fn to_expression(&self) -> Expression {
-        Expression::from_inner(ArithmosExpression::var(&self.inner.name))
+        Expression::from_inner(ArithmaExpression::var(&self.inner.name))
     }
 
     fn __repr__(&self) -> String {
         match &self.inner.value {
-            ArithmosVariableValue::Unbound => {
+            ArithmaVariableValue::Unbound => {
                 format!("Variable({}, binding=None)", self.inner.name)
             }
-            ArithmosVariableValue::Float(f) => {
+            ArithmaVariableValue::Float(f) => {
                 format!("Variable({}, binding={})", self.inner.name, f)
             }
-            ArithmosVariableValue::Symbolic(_) => {
+            ArithmaVariableValue::Symbolic(_) => {
                 format!("Variable({}, binding=<Expression>)", self.inner.name)
             }
         }

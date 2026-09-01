@@ -9,23 +9,23 @@
 
 //! N-dimensional symbolic tensor. Wave-2 placeholder.
 
-use crate::expression::ArithmosExpression;
+use crate::expression::ArithmaExpression;
 
-/// A general N-dimensional tensor of `ArithmosExpression` cells.
+/// A general N-dimensional tensor of `ArithmaExpression` cells.
 #[derive(Debug, Clone)]
-pub struct ArithmosTensor {
+pub struct ArithmaTensor {
     pub shape: Vec<usize>,
-    pub cells: Vec<ArithmosExpression>,
+    pub cells: Vec<ArithmaExpression>,
 }
 
-impl ArithmosTensor {
+impl ArithmaTensor {
     /// Total cell count = ∏(shape).
     pub fn cell_count(shape: &[usize]) -> usize {
         shape.iter().product()
     }
 
     /// Construct a tensor; panics if `cells.len()` ≠ ∏(shape).
-    pub fn new(shape: Vec<usize>, cells: Vec<ArithmosExpression>) -> Self {
+    pub fn new(shape: Vec<usize>, cells: Vec<ArithmaExpression>) -> Self {
         assert_eq!(
             cells.len(),
             Self::cell_count(&shape),
@@ -35,17 +35,26 @@ impl ArithmosTensor {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaTensor`")]
+#[allow(unused)]
+pub use self::ArithmaTensor as ArithmosTensor;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn cell_count_zero_dimensional_is_one() {
-        assert_eq!(ArithmosTensor::cell_count(&[]), 1);
+        assert_eq!(ArithmaTensor::cell_count(&[]), 1);
     }
 
     #[test]
     fn cell_count_three_d() {
-        assert_eq!(ArithmosTensor::cell_count(&[2, 3, 4]), 24);
+        assert_eq!(ArithmaTensor::cell_count(&[2, 3, 4]), 24);
     }
 }

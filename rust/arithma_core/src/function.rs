@@ -9,8 +9,8 @@
 
 //! # Function
 //!
-//! `ArithmosFunction` — the operator catalogue carried inside
-//! `ArithmosExpression::Function(op, args)`. Variants mirror `PTFunction` so the
+//! `ArithmaFunction` — the operator catalogue carried inside
+//! `ArithmaExpression::Function(op, args)`. Variants mirror `PTFunction` so the
 //! Wave-3 migration is mechanical.
 //!
 //! Variants are grouped:
@@ -36,12 +36,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::expression::ArithmosExpression;
-use crate::integer::ArithmosInteger;
+use crate::expression::ArithmaExpression;
+use crate::integer::ArithmaInteger;
 
 /// Direction marker for one-sided limits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ArithmosLimitDirection {
+pub enum ArithmaLimitDirection {
     /// Approach from the left (x → a⁻).
     Left,
     /// Approach from the right (x → a⁺).
@@ -53,14 +53,14 @@ pub enum ArithmosLimitDirection {
 /// The operator catalogue.
 ///
 /// Note: `PartialEq`/`Eq`/`Hash` are intentionally omitted because variants
-/// carry `Box<ArithmosExpression>` and `ArithmosInteger`, which themselves
+/// carry `Box<ArithmaExpression>` and `ArithmaInteger`, which themselves
 /// transitively contain `f64` fields and cannot satisfy `Eq`/`Hash` without
 /// a hand-rolled impl that defines a canonical comparison for floats. That
 /// impl will land alongside the equation-ID hashing work in pt-phantasia
 /// (see plan §C "Equation-ID texture mechanism"). For now, comparing two
-/// `ArithmosFunction`s structurally is the consumer's responsibility.
+/// `ArithmaFunction`s structurally is the consumer's responsibility.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ArithmosFunction {
+pub enum ArithmaFunction {
     // Basic arithmetic
     Add,
     Subtract,
@@ -97,8 +97,8 @@ pub enum ArithmosFunction {
     Log,
     Log10,
     Log2,
-    LogBase(ArithmosInteger),
-    Pow(ArithmosInteger),
+    LogBase(ArithmaInteger),
+    Pow(ArithmaInteger),
 
     // Roots
     Sqrt,
@@ -136,8 +136,8 @@ pub enum ArithmosFunction {
     },
     DefiniteIntegral {
         var: String,
-        lower_bound: Box<ArithmosExpression>,
-        upper_bound: Box<ArithmosExpression>,
+        lower_bound: Box<ArithmaExpression>,
+        upper_bound: Box<ArithmaExpression>,
     },
 
     // Vector calculus
@@ -157,40 +157,40 @@ pub enum ArithmosFunction {
     // Numerical methods
     FindRoots {
         var: String,
-        lower_bound: Box<ArithmosExpression>,
-        upper_bound: Box<ArithmosExpression>,
+        lower_bound: Box<ArithmaExpression>,
+        upper_bound: Box<ArithmaExpression>,
     },
     NewtonRaphson {
         var: String,
-        initial_guess: Box<ArithmosExpression>,
+        initial_guess: Box<ArithmaExpression>,
     },
     FindCriticalPoints {
         var: String,
-        lower_bound: Box<ArithmosExpression>,
-        upper_bound: Box<ArithmosExpression>,
+        lower_bound: Box<ArithmaExpression>,
+        upper_bound: Box<ArithmaExpression>,
     },
     Optimize {
         var: String,
-        lower_bound: Box<ArithmosExpression>,
-        upper_bound: Box<ArithmosExpression>,
+        lower_bound: Box<ArithmaExpression>,
+        upper_bound: Box<ArithmaExpression>,
         maximize: bool,
     },
 
     // Limit / series
     Limit {
         var: String,
-        approach: Box<ArithmosExpression>,
-        direction: ArithmosLimitDirection,
+        approach: Box<ArithmaExpression>,
+        direction: ArithmaLimitDirection,
     },
     Summation {
         var: String,
-        lower_bound: Box<ArithmosExpression>,
-        upper_bound: Box<ArithmosExpression>,
+        lower_bound: Box<ArithmaExpression>,
+        upper_bound: Box<ArithmaExpression>,
     },
     Product {
         var: String,
-        lower_bound: Box<ArithmosExpression>,
-        upper_bound: Box<ArithmosExpression>,
+        lower_bound: Box<ArithmaExpression>,
+        upper_bound: Box<ArithmaExpression>,
     },
 
     // Statistical
@@ -199,7 +199,7 @@ pub enum ArithmosFunction {
     Quartiles,
     InterquartileRange,
     Percentile {
-        percentile: ArithmosInteger,
+        percentile: ArithmaInteger,
     },
     Mean,
     Sum,
@@ -219,7 +219,7 @@ pub enum ArithmosFunction {
     SurfaceArea,
 }
 
-impl ArithmosFunction {
+impl ArithmaFunction {
     /// Return the expected number of arguments. Wave-2 stub knows the obvious
     /// cases; the real arity table lands in Wave 3.
     pub fn arity(&self) -> usize {
@@ -248,10 +248,22 @@ impl ArithmosFunction {
 
     /// Best-effort exact evaluation when all arguments are themselves constants.
     /// Returns `None` if no exact form is known. Stub for Wave 2.
-    pub fn evaluate_exact(&self, _args: &[ArithmosExpression]) -> Option<ArithmosExpression> {
+    pub fn evaluate_exact(&self, _args: &[ArithmaExpression]) -> Option<ArithmaExpression> {
         None
     }
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaFunction`")]
+#[allow(unused)]
+pub use self::ArithmaFunction as ArithmosFunction;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaLimitDirection`")]
+#[allow(unused)]
+pub use self::ArithmaLimitDirection as ArithmosLimitDirection;
 
 #[cfg(test)]
 mod tests {
@@ -259,20 +271,20 @@ mod tests {
 
     #[test]
     fn binary_arithmetic_is_arity_two() {
-        assert_eq!(ArithmosFunction::Add.arity(), 2);
-        assert_eq!(ArithmosFunction::Multiply.arity(), 2);
-        assert_eq!(ArithmosFunction::Power.arity(), 2);
+        assert_eq!(ArithmaFunction::Add.arity(), 2);
+        assert_eq!(ArithmaFunction::Multiply.arity(), 2);
+        assert_eq!(ArithmaFunction::Power.arity(), 2);
     }
 
     #[test]
     fn unary_transcendentals_are_arity_one() {
-        assert_eq!(ArithmosFunction::Sin.arity(), 1);
-        assert_eq!(ArithmosFunction::Exp.arity(), 1);
-        assert_eq!(ArithmosFunction::Sqrt.arity(), 1);
+        assert_eq!(ArithmaFunction::Sin.arity(), 1);
+        assert_eq!(ArithmaFunction::Exp.arity(), 1);
+        assert_eq!(ArithmaFunction::Sqrt.arity(), 1);
     }
 
     #[test]
     fn standard_score_is_arity_three() {
-        assert_eq!(ArithmosFunction::StandardScore.arity(), 3);
+        assert_eq!(ArithmaFunction::StandardScore.arity(), 3);
     }
 }

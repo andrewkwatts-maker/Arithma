@@ -1,9 +1,14 @@
 """Core smoke tests for the arithma package."""
+from importlib.metadata import version as _installed_version
+
 import arithma
 
 
 def test_version():
-    assert arithma.__version__ == "2.0.4"
+    # Compares against the installed package's own metadata (populated from
+    # pyproject.toml at build time) rather than a second hardcoded literal,
+    # so this test can't drift out of sync with a version bump on its own.
+    assert arithma.__version__ == _installed_version("arithma")
 
 
 def test_has_rust_flag_is_bool():

@@ -9,7 +9,7 @@
 
 //! # Calculus
 //!
-//! Symbolic calculus operators applied to `ArithmosExpression`. Implementations
+//! Symbolic calculus operators applied to `ArithmaExpression`. Implementations
 //! are split between the recursive (legacy) and iterative (preferred) forms so
 //! engine-side callers can choose stack-safe variants when expressions are deep.
 //!
@@ -32,14 +32,14 @@ pub use integration::{integrate, integrate_definite};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::expression::ArithmosExpression;
+    use crate::expression::ArithmaExpression;
 
     #[test]
     fn calculus_module_exports_resolve() {
         // Compile-time smoke: every re-export is callable. We don't invoke the
         // stubs (they panic) — just take function pointers to prove the paths.
-        let _: fn(&ArithmosExpression, &str) -> _ = differentiate;
-        let _: fn(&ArithmosExpression, &str) -> _ = differentiate_iterative;
-        let _: fn(&ArithmosExpression, &str) -> _ = integrate;
+        let _: fn(&ArithmaExpression, &str) -> _ = differentiate;
+        let _: fn(&ArithmaExpression, &str) -> _ = differentiate_iterative;
+        let _: fn(&ArithmaExpression, &str) -> _ = integrate;
     }
 }

@@ -26,11 +26,11 @@
 //! single `Combine` frame describing how to assemble the parent's derivative
 //! from the child derivatives that the work stack will leave behind.
 
-use crate::expression::ArithmosExpression;
-use crate::function::ArithmosFunction;
+use crate::expression::ArithmaExpression;
+use crate::function::ArithmaFunction;
 
 /// Hard cap on visited tree nodes. Bounded loops per CLAUDE.md safety rule 2.
-const ARITHMOS_DIFF_NODE_CAP: usize = 1_048_576;
+const ARITHMA_DIFF_NODE_CAP: usize = 1_048_576;
 
 /// What to do once a node's child derivatives are on the result stack.
 #[derive(Debug, Clone)]
@@ -41,61 +41,61 @@ enum Combine {
     Sub,
     /// d/dx (a * b) = a'*b + a*b'
     Mul {
-        a: ArithmosExpression,
-        b: ArithmosExpression,
+        a: ArithmaExpression,
+        b: ArithmaExpression,
     },
     /// d/dx (a / b) = (a'*b - a*b') / b^2
     Div {
-        a: ArithmosExpression,
-        b: ArithmosExpression,
+        a: ArithmaExpression,
+        b: ArithmaExpression,
     },
     /// d/dx (a ^ k) = k * a^(k-1) * a'   when k is constant w.r.t. var
     /// We only support constant-exponent for the iterative pass; the general
     /// rule produces a `Function::Power` shape callers can simplify later.
     Pow {
-        base: ArithmosExpression,
-        exponent: ArithmosExpression,
+        base: ArithmaExpression,
+        exponent: ArithmaExpression,
     },
     /// d/dx (-a) = -a'
     Neg,
     /// d/dx sqrt(a) = a' / (2 sqrt(a))
-    Sqrt { inner: ArithmosExpression },
+    Sqrt { inner: ArithmaExpression },
     /// d/dx exp(a) = a' * exp(a)
-    Exp { inner: ArithmosExpression },
+    Exp { inner: ArithmaExpression },
     /// d/dx ln(a) = a' / a
-    Ln { inner: ArithmosExpression },
+    Ln { inner: ArithmaExpression },
     /// d/dx sin(a) = a' * cos(a)
-    Sin { inner: ArithmosExpression },
+    Sin { inner: ArithmaExpression },
     /// d/dx cos(a) = -a' * sin(a)
-    Cos { inner: ArithmosExpression },
+    Cos { inner: ArithmaExpression },
     /// d/dx tan(a) = a' / cos(a)^2
-    Tan { inner: ArithmosExpression },
+    Tan { inner: ArithmaExpression },
 }
 
 /// Worklist frame.
 enum Frame<'a> {
-    Enter(&'a ArithmosExpression),
+    Enter(&'a ArithmaExpression),
     Combine(Combine),
 }
 
 /// Iterative implementation of symbolic differentiation. Uses an explicit work
 /// stack so depth is bounded by available heap, not by the OS thread stack.
 pub fn differentiate_iterative(
-    expr: &ArithmosExpression,
+    expr: &ArithmaExpression,
     var: &str,
-) -> Result<ArithmosExpression, String> {
-    let mut diff = ArithmosIterativeDifferentiator::new();
+) -> Result<ArithmaExpression, String> {
+    let mut diff = ArithmaIterativeDifferentiator::new();
     diff.differentiate(expr, var)
 }
 
 /// Stateful iterative differentiator that reuses its own work stack.
 #[derive(Debug, Default)]
-pub struct ArithmosIterativeDifferentiator {
+pub struct ArithmaIterativeDifferentiator {
     /// Re-usable stack of (expression, variable) tuples. Empty between calls.
-    stack: Vec<(ArithmosExpression, String)>,
+    stack: Vec<(ArithmaExpression, String)>,
 }
 
-impl ArithmosIterativeDifferentiator {
+impl ArithmaIterativeDifferentiator {
     /// Construct a fresh differentiator.
     pub fn new() -> Self {
         Self { stack: Vec::new() }
@@ -104,21 +104,21 @@ impl ArithmosIterativeDifferentiator {
     /// Differentiate `expr` with respect to `var`.
     pub fn differentiate(
         &mut self,
-        expr: &ArithmosExpression,
+        expr: &ArithmaExpression,
         var: &str,
-    ) -> Result<ArithmosExpression, String> {
+    ) -> Result<ArithmaExpression, String> {
         self.stack.clear();
         debug_assert!(self.stack.is_empty(), "stack not cleared");
         debug_assert!(!var.is_empty(), "differentiate: empty variable name");
 
         let mut work: Vec<Frame> = Vec::with_capacity(32);
-        let mut results: Vec<ArithmosExpression> = Vec::with_capacity(32);
+        let mut results: Vec<ArithmaExpression> = Vec::with_capacity(32);
         work.push(Frame::Enter(expr));
 
         let mut guard: usize = 0;
         while let Some(frame) = work.pop() {
             guard += 1;
-            if guard > ARITHMOS_DIFF_NODE_CAP {
+            if guard > ARITHMA_DIFF_NODE_CAP {
                 return Err("differentiate: node cap exceeded".into());
             }
             match frame {
@@ -136,27 +136,27 @@ impl ArithmosIterativeDifferentiator {
 /// Handle one `Enter` frame: either emit an atomic derivative or schedule
 /// child traversal followed by a `Combine` frame.
 fn enter_node<'a>(
-    node: &'a ArithmosExpression,
+    node: &'a ArithmaExpression,
     var: &str,
     work: &mut Vec<Frame<'a>>,
-    results: &mut Vec<ArithmosExpression>,
+    results: &mut Vec<ArithmaExpression>,
 ) -> Result<(), String> {
     debug_assert!(!var.is_empty(), "enter_node: empty variable");
     match node {
-        ArithmosExpression::Number(_) | ArithmosExpression::Constant { .. } => {
-            results.push(ArithmosExpression::zero());
+        ArithmaExpression::Number(_) | ArithmaExpression::Constant { .. } => {
+            results.push(ArithmaExpression::zero());
             Ok(())
         }
-        ArithmosExpression::Variable(name) => {
+        ArithmaExpression::Variable(name) => {
             let dv = if name == var {
-                ArithmosExpression::from_i64(1)
+                ArithmaExpression::from_i64(1)
             } else {
-                ArithmosExpression::zero()
+                ArithmaExpression::zero()
             };
             results.push(dv);
             Ok(())
         }
-        ArithmosExpression::Function(func, args) => schedule_function(func, args, work),
+        ArithmaExpression::Function(func, args) => schedule_function(func, args, work),
         _ => Err(format!(
             "differentiate: unsupported variant for variable '{var}'"
         )),
@@ -165,13 +165,13 @@ fn enter_node<'a>(
 
 /// Schedule child evaluations and a matching `Combine` for a function node.
 fn schedule_function<'a>(
-    func: &ArithmosFunction,
-    args: &'a [ArithmosExpression],
+    func: &ArithmaFunction,
+    args: &'a [ArithmaExpression],
     work: &mut Vec<Frame<'a>>,
 ) -> Result<(), String> {
     debug_assert!(!args.is_empty(), "schedule_function: empty args");
     match func {
-        ArithmosFunction::Add => {
+        ArithmaFunction::Add => {
             if args.len() != 2 {
                 return Err("Add: expected 2 args".into());
             }
@@ -180,7 +180,7 @@ fn schedule_function<'a>(
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Subtract => {
+        ArithmaFunction::Subtract => {
             if args.len() != 2 {
                 return Err("Subtract: expected 2 args".into());
             }
@@ -189,7 +189,7 @@ fn schedule_function<'a>(
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Multiply => {
+        ArithmaFunction::Multiply => {
             if args.len() != 2 {
                 return Err("Multiply: expected 2 args".into());
             }
@@ -201,7 +201,7 @@ fn schedule_function<'a>(
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Divide => {
+        ArithmaFunction::Divide => {
             if args.len() != 2 {
                 return Err("Divide: expected 2 args".into());
             }
@@ -213,7 +213,7 @@ fn schedule_function<'a>(
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Power => {
+        ArithmaFunction::Power => {
             if args.len() != 2 {
                 return Err("Power: expected 2 args".into());
             }
@@ -224,47 +224,47 @@ fn schedule_function<'a>(
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Negate => {
+        ArithmaFunction::Negate => {
             work.push(Frame::Combine(Combine::Neg));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Sqrt => {
+        ArithmaFunction::Sqrt => {
             work.push(Frame::Combine(Combine::Sqrt {
                 inner: args[0].clone(),
             }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Exp => {
+        ArithmaFunction::Exp => {
             work.push(Frame::Combine(Combine::Exp {
                 inner: args[0].clone(),
             }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Ln => {
+        ArithmaFunction::Ln => {
             work.push(Frame::Combine(Combine::Ln {
                 inner: args[0].clone(),
             }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Sin => {
+        ArithmaFunction::Sin => {
             work.push(Frame::Combine(Combine::Sin {
                 inner: args[0].clone(),
             }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Cos => {
+        ArithmaFunction::Cos => {
             work.push(Frame::Combine(Combine::Cos {
                 inner: args[0].clone(),
             }));
             work.push(Frame::Enter(&args[0]));
             Ok(())
         }
-        ArithmosFunction::Tan => {
+        ArithmaFunction::Tan => {
             work.push(Frame::Combine(Combine::Tan {
                 inner: args[0].clone(),
             }));
@@ -276,123 +276,129 @@ fn schedule_function<'a>(
 }
 
 /// Pop one or two child derivatives and push the assembled parent derivative.
-fn combine_frame(c: Combine, results: &mut Vec<ArithmosExpression>) -> Result<(), String> {
+fn combine_frame(c: Combine, results: &mut Vec<ArithmaExpression>) -> Result<(), String> {
     debug_assert!(!results.is_empty(), "combine_frame: empty results");
     match c {
         Combine::Add => {
             let db = pop_one(results)?;
             let da = pop_one(results)?;
-            results.push(ArithmosExpression::add(da, db));
+            results.push(ArithmaExpression::add(da, db));
         }
         Combine::Sub => {
             let db = pop_one(results)?;
             let da = pop_one(results)?;
-            results.push(ArithmosExpression::sub(da, db));
+            results.push(ArithmaExpression::sub(da, db));
         }
         Combine::Mul { a, b } => {
             let db = pop_one(results)?;
             let da = pop_one(results)?;
-            let left = ArithmosExpression::mul(da, b);
-            let right = ArithmosExpression::mul(a, db);
-            results.push(ArithmosExpression::add(left, right));
+            let left = ArithmaExpression::mul(da, b);
+            let right = ArithmaExpression::mul(a, db);
+            results.push(ArithmaExpression::add(left, right));
         }
         Combine::Div { a, b } => {
             let db = pop_one(results)?;
             let da = pop_one(results)?;
-            let num_left = ArithmosExpression::mul(da, b.clone());
-            let num_right = ArithmosExpression::mul(a, db);
-            let num = ArithmosExpression::sub(num_left, num_right);
-            let denom = ArithmosExpression::mul(b.clone(), b);
-            results.push(ArithmosExpression::div(num, denom));
+            let num_left = ArithmaExpression::mul(da, b.clone());
+            let num_right = ArithmaExpression::mul(a, db);
+            let num = ArithmaExpression::sub(num_left, num_right);
+            let denom = ArithmaExpression::mul(b.clone(), b);
+            results.push(ArithmaExpression::div(num, denom));
         }
         Combine::Pow { base, exponent } => {
             // We currently support the constant-exponent power rule.
             let da = pop_one(results)?;
-            let new_exp =
-                ArithmosExpression::sub(exponent.clone(), ArithmosExpression::from_i64(1));
-            let base_pow = ArithmosExpression::pow(base, new_exp);
-            let scaled = ArithmosExpression::mul(exponent, base_pow);
-            results.push(ArithmosExpression::mul(scaled, da));
+            let new_exp = ArithmaExpression::sub(exponent.clone(), ArithmaExpression::from_i64(1));
+            let base_pow = ArithmaExpression::pow(base, new_exp);
+            let scaled = ArithmaExpression::mul(exponent, base_pow);
+            results.push(ArithmaExpression::mul(scaled, da));
         }
         Combine::Neg => {
             let da = pop_one(results)?;
-            results.push(ArithmosExpression::neg(da));
+            results.push(ArithmaExpression::neg(da));
         }
         Combine::Sqrt { inner } => {
             let da = pop_one(results)?;
-            let two = ArithmosExpression::from_i64(2);
-            let denom = ArithmosExpression::mul(two, ArithmosExpression::sqrt(inner));
-            results.push(ArithmosExpression::div(da, denom));
+            let two = ArithmaExpression::from_i64(2);
+            let denom = ArithmaExpression::mul(two, ArithmaExpression::sqrt(inner));
+            results.push(ArithmaExpression::div(da, denom));
         }
         Combine::Exp { inner } => {
             let da = pop_one(results)?;
-            results.push(ArithmosExpression::mul(da, ArithmosExpression::exp(inner)));
+            results.push(ArithmaExpression::mul(da, ArithmaExpression::exp(inner)));
         }
         Combine::Ln { inner } => {
             let da = pop_one(results)?;
-            results.push(ArithmosExpression::div(da, inner));
+            results.push(ArithmaExpression::div(da, inner));
         }
         Combine::Sin { inner } => {
             let da = pop_one(results)?;
-            results.push(ArithmosExpression::mul(da, ArithmosExpression::cos(inner)));
+            results.push(ArithmaExpression::mul(da, ArithmaExpression::cos(inner)));
         }
         Combine::Cos { inner } => {
             let da = pop_one(results)?;
-            let neg_sin = ArithmosExpression::neg(ArithmosExpression::sin(inner));
-            results.push(ArithmosExpression::mul(da, neg_sin));
+            let neg_sin = ArithmaExpression::neg(ArithmaExpression::sin(inner));
+            results.push(ArithmaExpression::mul(da, neg_sin));
         }
         Combine::Tan { inner } => {
             let da = pop_one(results)?;
-            let cos_inner = ArithmosExpression::cos(inner);
-            let cos_sq = ArithmosExpression::mul(cos_inner.clone(), cos_inner);
-            results.push(ArithmosExpression::div(da, cos_sq));
+            let cos_inner = ArithmaExpression::cos(inner);
+            let cos_sq = ArithmaExpression::mul(cos_inner.clone(), cos_inner);
+            results.push(ArithmaExpression::div(da, cos_sq));
         }
     }
     Ok(())
 }
 
-fn pop_one(results: &mut Vec<ArithmosExpression>) -> Result<ArithmosExpression, String> {
+fn pop_one(results: &mut Vec<ArithmaExpression>) -> Result<ArithmaExpression, String> {
     results
         .pop()
         .ok_or_else(|| "differentiate: result stack underflow".to_string())
 }
 
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaIterativeDifferentiator`")]
+#[allow(unused)]
+pub use self::ArithmaIterativeDifferentiator as ArithmosIterativeDifferentiator;
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::expression::{ArithmosBindings, Evaluable};
+    use crate::expression::{ArithmaBindings, Evaluable};
 
     #[test]
     fn new_differentiator_starts_empty() {
-        let d = ArithmosIterativeDifferentiator::new();
+        let d = ArithmaIterativeDifferentiator::new();
         assert!(d.stack.is_empty());
     }
 
     #[test]
     fn derivative_of_variable_is_one() {
-        let expr = ArithmosExpression::var("x");
+        let expr = ArithmaExpression::var("x");
         let d = differentiate_iterative(&expr, "x").unwrap();
-        let v = d.evaluate(&ArithmosBindings::new()).unwrap();
+        let v = d.evaluate(&ArithmaBindings::new()).unwrap();
         assert!((v - 1.0).abs() < 1e-12);
     }
 
     #[test]
     fn derivative_of_constant_is_zero() {
-        let expr = ArithmosExpression::from_i64(42);
+        let expr = ArithmaExpression::from_i64(42);
         let d = differentiate_iterative(&expr, "x").unwrap();
-        let v = d.evaluate(&ArithmosBindings::new()).unwrap();
+        let v = d.evaluate(&ArithmaBindings::new()).unwrap();
         assert!(v.abs() < 1e-12);
     }
 
     #[test]
     fn derivative_of_x_squared_at_three_is_six() {
         // d/dx x^2 = 2x, evaluated at x=3 gives 6.
-        let expr = ArithmosExpression::pow(
-            ArithmosExpression::var("x"),
-            ArithmosExpression::from_i64(2),
-        );
+        let expr =
+            ArithmaExpression::pow(ArithmaExpression::var("x"), ArithmaExpression::from_i64(2));
         let d = differentiate_iterative(&expr, "x").unwrap();
-        let mut bindings = ArithmosBindings::new();
+        let mut bindings = ArithmaBindings::new();
         bindings.insert("x".to_string(), 3.0);
         let v = d.evaluate(&bindings).unwrap();
         assert!((v - 6.0).abs() < 1e-9, "got {v}");
@@ -400,9 +406,9 @@ mod tests {
 
     #[test]
     fn derivative_of_sin_x_is_cos_x() {
-        let expr = ArithmosExpression::sin(ArithmosExpression::var("x"));
+        let expr = ArithmaExpression::sin(ArithmaExpression::var("x"));
         let d = differentiate_iterative(&expr, "x").unwrap();
-        let mut bindings = ArithmosBindings::new();
+        let mut bindings = ArithmaBindings::new();
         bindings.insert("x".to_string(), 0.0);
         let v = d.evaluate(&bindings).unwrap();
         assert!((v - 1.0).abs() < 1e-9, "got {v}");

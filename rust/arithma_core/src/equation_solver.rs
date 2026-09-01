@@ -16,12 +16,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::expression::ArithmosExpression;
+use crate::expression::ArithmaExpression;
 
 /// Strategy hint for the solver. Implementations may ignore it and use their
 /// own heuristics, but this gives callers a way to express priorities.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
-pub enum ArithmosSolverStrategy {
+pub enum ArithmaSolverStrategy {
     /// Auto-detect (default).
     #[default]
     Auto,
@@ -35,9 +35,9 @@ pub enum ArithmosSolverStrategy {
 
 /// One root or solution branch returned by the solver.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ArithmosSolution {
+pub struct ArithmaSolution {
     /// Symbolic form of the solution (e.g. `(-b ± √(b²-4ac)) / (2a)`).
-    pub expression: ArithmosExpression,
+    pub expression: ArithmaExpression,
     /// Optional cached numeric value.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cached: Option<f64>,
@@ -47,32 +47,44 @@ pub struct ArithmosSolution {
 
 /// Solve `expr = 0` for `var`. Returns every branch the solver finds.
 pub fn solve(
-    _expr: &ArithmosExpression,
+    _expr: &ArithmaExpression,
     _var: &str,
-    _strategy: ArithmosSolverStrategy,
-) -> Result<Vec<ArithmosSolution>, String> {
+    _strategy: ArithmaSolverStrategy,
+) -> Result<Vec<ArithmaSolution>, String> {
     unimplemented!("solve — populated in Wave 3")
 }
 
 /// Solve `lhs = rhs` for `var`. Convenience that internally rewrites to
 /// `lhs - rhs = 0`.
 pub fn solve_equation(
-    _lhs: &ArithmosExpression,
-    _rhs: &ArithmosExpression,
+    _lhs: &ArithmaExpression,
+    _rhs: &ArithmaExpression,
     _var: &str,
-    _strategy: ArithmosSolverStrategy,
-) -> Result<Vec<ArithmosSolution>, String> {
+    _strategy: ArithmaSolverStrategy,
+) -> Result<Vec<ArithmaSolution>, String> {
     unimplemented!("solve_equation — populated in Wave 3")
 }
 
 /// Solve a system of equations for the listed variables.
 pub fn solve_system(
-    _equations: &[(ArithmosExpression, ArithmosExpression)],
+    _equations: &[(ArithmaExpression, ArithmaExpression)],
     _vars: &[&str],
-    _strategy: ArithmosSolverStrategy,
-) -> Result<Vec<Vec<ArithmosSolution>>, String> {
+    _strategy: ArithmaSolverStrategy,
+) -> Result<Vec<Vec<ArithmaSolution>>, String> {
     unimplemented!("solve_system — populated in Wave 3")
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaSolution`")]
+#[allow(unused)]
+pub use self::ArithmaSolution as ArithmosSolution;
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaSolverStrategy`")]
+#[allow(unused)]
+pub use self::ArithmaSolverStrategy as ArithmosSolverStrategy;
 
 #[cfg(test)]
 mod tests {
@@ -81,8 +93,8 @@ mod tests {
     #[test]
     fn default_strategy_is_auto() {
         assert_eq!(
-            ArithmosSolverStrategy::default(),
-            ArithmosSolverStrategy::Auto
+            ArithmaSolverStrategy::default(),
+            ArithmaSolverStrategy::Auto
         );
     }
 }

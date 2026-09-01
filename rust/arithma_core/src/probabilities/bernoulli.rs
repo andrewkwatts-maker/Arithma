@@ -11,27 +11,27 @@
 //!
 //! `Bernoulli(p)` — single trial success / failure.
 
-use crate::probabilities::ArithmosDistribution;
+use crate::probabilities::ArithmaDistribution;
 
 /// Bernoulli distribution.
 #[derive(Debug, Clone, Copy)]
-pub struct ArithmosBernoulli {
+pub struct ArithmaBernoulli {
     pub p: f64,
 }
 
-impl ArithmosBernoulli {
+impl ArithmaBernoulli {
     /// `Bernoulli(p)`.
     pub fn new(p: f64) -> Self {
         Self { p }
     }
 }
 
-impl ArithmosDistribution for ArithmosBernoulli {
+impl ArithmaDistribution for ArithmaBernoulli {
     fn pdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosBernoulli::pdf — populated in Wave 3")
+        unimplemented!("ArithmaBernoulli::pdf — populated in Wave 3")
     }
     fn cdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosBernoulli::cdf — populated in Wave 3")
+        unimplemented!("ArithmaBernoulli::cdf — populated in Wave 3")
     }
     fn mean(&self) -> Result<f64, String> {
         Ok(self.p)
@@ -41,13 +41,22 @@ impl ArithmosDistribution for ArithmosBernoulli {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaBernoulli`")]
+#[allow(unused)]
+pub use self::ArithmaBernoulli as ArithmosBernoulli;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn fair_coin_has_quarter_variance() {
-        let b = ArithmosBernoulli::new(0.5);
+        let b = ArithmaBernoulli::new(0.5);
         assert!((b.variance().unwrap() - 0.25).abs() < 1e-12);
     }
 }

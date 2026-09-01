@@ -14,7 +14,7 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use crate::unit::ArithmosUnit;
+use crate::unit::ArithmaUnit;
 
 /// Embedded SI units catalogue. Read once, parsed lazily.
 const SI_UNITS_JSON: &str = include_str!("si_units.json");
@@ -39,13 +39,13 @@ struct SiUnitDef {
     name: String,
 }
 
-/// Lazy-built map of symbol → [`ArithmosUnit`], parsed from the embedded JSON.
+/// Lazy-built map of symbol → [`ArithmaUnit`], parsed from the embedded JSON.
 ///
 /// A malformed catalogue is a build-time authoring error, not a runtime
 /// condition — but panicking inside a `Lazy` would poison every later lookup,
 /// so a parse failure yields an empty registry and `len() == 0` is the signal.
 /// `si_units_parse_is_ok()` asserts the shipped file parses.
-static REGISTRY: Lazy<HashMap<String, ArithmosUnit>> = Lazy::new(|| {
+static REGISTRY: Lazy<HashMap<String, ArithmaUnit>> = Lazy::new(|| {
     let mut map = HashMap::new();
     if let Ok(doc) = serde_json::from_str::<SiUnitsDoc>(SI_UNITS_JSON) {
         for def in doc
@@ -54,18 +54,18 @@ static REGISTRY: Lazy<HashMap<String, ArithmosUnit>> = Lazy::new(|| {
             .into_iter()
             .chain(doc.si_units.derived_units)
         {
-            map.insert(def.symbol.clone(), ArithmosUnit::new(def.symbol, def.name));
+            map.insert(def.symbol.clone(), ArithmaUnit::new(def.symbol, def.name));
         }
     }
     map
 });
 
 /// Public-facing SI-units registry.
-pub struct ArithmosSIUnits;
+pub struct ArithmaSIUnits;
 
-impl ArithmosSIUnits {
+impl ArithmaSIUnits {
     /// Try to find a unit by SI symbol.
-    pub fn lookup(symbol: &str) -> Option<&'static ArithmosUnit> {
+    pub fn lookup(symbol: &str) -> Option<&'static ArithmaUnit> {
         REGISTRY.get(symbol)
     }
 
@@ -80,18 +80,27 @@ impl ArithmosSIUnits {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaSIUnits`")]
+#[allow(unused)]
+pub use self::ArithmaSIUnits as ArithmosSIUnits;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn embedded_json_is_non_empty() {
-        assert!(!ArithmosSIUnits::embedded_json().is_empty());
+        assert!(!ArithmaSIUnits::embedded_json().is_empty());
     }
 
     #[test]
     fn lookup_unknown_returns_none() {
-        assert!(ArithmosSIUnits::lookup("zzz_unknown").is_none());
+        assert!(ArithmaSIUnits::lookup("zzz_unknown").is_none());
     }
 
     #[test]
@@ -104,14 +113,14 @@ mod tests {
 
     #[test]
     fn registry_is_populated() {
-        assert!(ArithmosSIUnits::len() > 0, "SI registry must not be empty");
+        assert!(ArithmaSIUnits::len() > 0, "SI registry must not be empty");
     }
 
     #[test]
     fn base_units_resolve() {
         for (sym, name) in [("m", "meter"), ("kg", "kilogram"), ("s", "second")] {
             let u =
-                ArithmosSIUnits::lookup(sym).unwrap_or_else(|| panic!("base unit '{sym}' missing"));
+                ArithmaSIUnits::lookup(sym).unwrap_or_else(|| panic!("base unit '{sym}' missing"));
             assert_eq!(u.symbol, sym);
             assert_eq!(u.name, name);
         }

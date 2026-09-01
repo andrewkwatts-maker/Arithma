@@ -9,17 +9,17 @@
 
 //! # Iterative simplifier passes
 //!
-//! Stack-based traversal of `ArithmosExpression` trees. The engine's
+//! Stack-based traversal of `ArithmaExpression` trees. The engine's
 //! safety-critical standards forbid recursion (rule 1: avoid recursion); every
 //! pass in this module is implemented with an explicit work stack so the call
 //! depth stays O(1) regardless of expression depth.
 //!
 //! Two flavours:
 //!
-//! - [`ArithmosIterativeSimplifier`] — stateful simplifier with a work queue.
+//! - [`ArithmaIterativeSimplifier`] — stateful simplifier with a work queue.
 //! - [`simplify_iterative`] — convenience function that owns its simplifier.
 
-use crate::expression::{ArithmosExpression, SimplificationConfig};
+use crate::expression::{ArithmaExpression, SimplificationConfig};
 
 /// Iterative, stack-based simplifier.
 ///
@@ -27,14 +27,14 @@ use crate::expression::{ArithmosExpression, SimplificationConfig};
 /// Implementations must respect `config.max_iterations` and bail rather than
 /// loop forever (CLAUDE.md safety rule 2: all loops have fixed bounds).
 #[derive(Debug, Default)]
-pub struct ArithmosIterativeSimplifier {
+pub struct ArithmaIterativeSimplifier {
     /// Re-usable work stack. Avoids per-call allocations.
-    stack: Vec<ArithmosExpression>,
+    stack: Vec<ArithmaExpression>,
     /// Iterations consumed by the most recent run.
     last_iterations: usize,
 }
 
-impl ArithmosIterativeSimplifier {
+impl ArithmaIterativeSimplifier {
     /// Create a fresh simplifier with empty state.
     pub fn new() -> Self {
         Self {
@@ -54,7 +54,7 @@ impl ArithmosIterativeSimplifier {
     /// pattern-matched rewrites.
     pub fn simplify(
         &mut self,
-        expr: &mut ArithmosExpression,
+        expr: &mut ArithmaExpression,
         _config: &SimplificationConfig,
     ) -> bool {
         self.stack.clear();
@@ -65,10 +65,19 @@ impl ArithmosIterativeSimplifier {
 }
 
 /// Convenience entry point: build a simplifier, run it, and discard it.
-pub fn simplify_iterative(expr: &mut ArithmosExpression, config: &SimplificationConfig) -> bool {
-    let mut simplifier = ArithmosIterativeSimplifier::new();
+pub fn simplify_iterative(expr: &mut ArithmaExpression, config: &SimplificationConfig) -> bool {
+    let mut simplifier = ArithmaIterativeSimplifier::new();
     simplifier.simplify(expr, config)
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaIterativeSimplifier`")]
+#[allow(unused)]
+pub use self::ArithmaIterativeSimplifier as ArithmosIterativeSimplifier;
 
 #[cfg(test)]
 mod tests {
@@ -76,13 +85,13 @@ mod tests {
 
     #[test]
     fn new_simplifier_starts_empty() {
-        let s = ArithmosIterativeSimplifier::new();
+        let s = ArithmaIterativeSimplifier::new();
         assert_eq!(s.last_iterations(), 0);
     }
 
     #[test]
     fn iterative_pass_returns_false_on_atom() {
-        let mut expr = ArithmosExpression::zero();
+        let mut expr = ArithmaExpression::zero();
         let cfg = SimplificationConfig::default();
         assert!(!simplify_iterative(&mut expr, &cfg));
     }

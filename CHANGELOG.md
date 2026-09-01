@@ -4,14 +4,14 @@ All notable changes to **Arithma** are documented here.
 
 ---
 
-## [Unreleased]
+## [2.0.4] — 2026-09-01
 
 ### Fixed
 
 - **The advertised `cpp-support` and `rust-support` features did not compile.**
   `external/mod.rs` declared `cpp_executor` and `rust_executor`, but neither
   file existed, so `cargo build --features cpp-support` failed with `E0583`.
-  Both are now real `ArithmosBackend` implementations: `rust_executor` wraps an
+  Both are now real `ArithmaBackend` implementations: `rust_executor` wraps an
   in-process closure, `cpp_executor` is a C-ABI seam exchanging expressions as
   JSON. An unbound handler reports `BackendUnavailable` so the router falls
   through, rather than panicking.
@@ -49,9 +49,19 @@ All notable changes to **Arithma** are documented here.
 
 ### Changed
 
+- **Finished the `Arithmos` → `Arithma` rename.** ~1,055 identifiers across 48
+  files — every public struct, enum, trait, type alias and function that still
+  carried the pre-rename `Arithmos*` prefix is now `Arithma*`. The old names
+  are kept as `#[deprecated]` `pub use ... as ...` aliases (module-level and,
+  for the crate-root re-exports, at the crate root too) for one release so
+  downstream (eml-math, eml-spectral, metaphysica, periodica) has a migration
+  window rather than a hard break.
+- `tests/test_core.py::test_version` no longer hardcodes the version string; it
+  compares `arithma.__version__` against the installed package's own
+  `importlib.metadata` entry, so it can't silently drift on the next bump.
 - `Cargo.lock` is now committed; this crate publishes a binary artifact and
   needs reproducible builds.
-- Test count 124 → 132 (138 with `cpp-support`). The new tests assert real
+- Test count 124 → 133 (139 with `cpp-support`). The new tests assert real
   values — π, e, φ and the m/kg/s base units resolve — rather than merely
   asserting that a call did not error, which is what let the two dead
   registries above ship green.
@@ -63,9 +73,7 @@ All notable changes to **Arithma** are documented here.
   on call; `grep -rn 'unimplemented!' rust/arithma_core/src` is the work list.
 - `Emit::emit` is still a stub. A complete LaTeX emitter lives in `pyfacade.rs`
   and is what `to_latex()` actually uses.
-- The `Arithmos*` type prefix survives throughout the source from the pre-rename
-  era; the crate, package and paths are `arithma`.
-- `ArithmosInternalInteger::to_f64` truncates above 2^256, and `from_f64` uses a
+- `ArithmaInternalInteger::to_f64` truncates above 2^256, and `from_f64` uses a
   fixed-scale rational rather than an exact dyadic conversion.
 
 ---

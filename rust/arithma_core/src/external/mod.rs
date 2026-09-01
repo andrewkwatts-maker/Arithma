@@ -7,10 +7,10 @@
 //!
 //!For inquiries, please contact AndrewKWatts@Gmail.com
 
-//! External-function registry — the integration seam for non-Arithmos backends.
+//! External-function registry — the integration seam for non-Arithma backends.
 //!
 //! The registry is the foundation of the three-way routing described in plan
-//! §B.5: pt-arithmos engine glue, Arithmos (default), and EML-Math co-exist by
+//! §B.5: pt-arithmos engine glue, Arithma (default), and EML-Math co-exist by
 //! registering themselves as backends here. Downstream plugins (pt-eml-bridge)
 //! call into the registry rather than dispatching directly.
 

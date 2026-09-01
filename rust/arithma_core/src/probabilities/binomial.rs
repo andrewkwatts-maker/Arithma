@@ -12,28 +12,28 @@
 //! `Binomial(n, p)` — number of successes in `n` independent trials each with
 //! success probability `p`.
 
-use crate::probabilities::ArithmosDistribution;
+use crate::probabilities::ArithmaDistribution;
 
 /// Binomial distribution.
 #[derive(Debug, Clone, Copy)]
-pub struct ArithmosBinomial {
+pub struct ArithmaBinomial {
     pub n: u64,
     pub p: f64,
 }
 
-impl ArithmosBinomial {
+impl ArithmaBinomial {
     /// `Binomial(n, p)`.
     pub fn new(n: u64, p: f64) -> Self {
         Self { n, p }
     }
 }
 
-impl ArithmosDistribution for ArithmosBinomial {
+impl ArithmaDistribution for ArithmaBinomial {
     fn pdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosBinomial::pdf — populated in Wave 3")
+        unimplemented!("ArithmaBinomial::pdf — populated in Wave 3")
     }
     fn cdf(&self, _x: f64) -> Result<f64, String> {
-        unimplemented!("ArithmosBinomial::cdf — populated in Wave 3")
+        unimplemented!("ArithmaBinomial::cdf — populated in Wave 3")
     }
     fn mean(&self) -> Result<f64, String> {
         Ok((self.n as f64) * self.p)
@@ -43,13 +43,22 @@ impl ArithmosDistribution for ArithmosBinomial {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases for the pre-rename `Arithmos*` names.
+// Retained for one release; downstream (eml-math, eml-spectral, metaphysica,
+// periodica) should migrate to the `Arithma*` names above.
+// ---------------------------------------------------------------------------
+#[deprecated(since = "2.0.4", note = "renamed to `ArithmaBinomial`")]
+#[allow(unused)]
+pub use self::ArithmaBinomial as ArithmosBinomial;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn binomial_mean_is_np() {
-        let b = ArithmosBinomial::new(10, 0.5);
+        let b = ArithmaBinomial::new(10, 0.5);
         assert!((b.mean().unwrap() - 5.0).abs() < 1e-12);
     }
 }
