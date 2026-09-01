@@ -46,6 +46,7 @@
 //! - [`simplify`] — compile-time and runtime simplification rules driven by the
 //!   `SimplificationConfig` policy.
 
+pub mod emit;
 pub mod iterative;
 pub mod simplify;
 
@@ -697,11 +698,7 @@ impl Simplify for ArithmaExpression {
     }
 }
 
-impl Emit for ArithmaExpression {
-    fn emit(&self, _target: EmitTarget) -> Result<String, String> {
-        unimplemented!("ArithmaExpression::emit — populated in Wave 3")
-    }
-}
+// `impl Emit for ArithmaExpression` lives in `expression::emit`.
 
 // ---------------------------------------------------------------------------
 // Backward-compatibility aliases for the pre-rename `Arithmos*` names.
