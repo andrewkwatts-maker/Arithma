@@ -4,7 +4,7 @@ import math
 import pytest
 
 import arithma
-from arithma import Expression, Integer, Variable
+from arithma import Expression, Integer, Matrix, Tensor, Unit, Variable
 
 
 # ---------------------------------------------------------------------------
@@ -515,3 +515,485 @@ def test_compact_rejects_empty_node():
 def test_compact_rejects_unsupported_operator_tag():
     with pytest.raises(ValueError):
         Expression.from_compact(["fn", "derivative", ["var", "x"]])
+
+
+# ---------------------------------------------------------------------------
+# Simplification
+#
+# `Expression.simplify` was absent from the facade while the Rust simplifier
+# was a stub. These pin the behaviour end to end, through the PyO3 boundary,
+# so a regression in either layer fails here rather than silently returning
+# the input unchanged.
+# ---------------------------------------------------------------------------
+
+def test_constant_sum_folds():
+    expr = Expression.number(1).add(Expression.number(1))
+    assert expr.simplify().evaluate({}) == 2.0
+
+
+def test_folding_collapses_the_tree_not_just_the_value():
+    # `evaluate` would return 2.0 either way; the point is that the tree is
+    # now a literal, so the fold actually happened.
+    expr = Expression.number(1).add(Expression.number(1))
+    assert expr.kind().startswith("function")
+    assert expr.simplify().kind() == "number"
+
+
+def test_additive_and_multiplicative_identities():
+    x = Expression.variable("x")
+    assert x.add(Expression.number(0)).simplify().to_latex() == "x"
+    assert x.mul(Expression.number(1)).simplify().to_latex() == "x"
+
+
+def test_absorbing_zero():
+    x = Expression.variable("x")
+    assert x.mul(Expression.number(0)).simplify().evaluate({}) == 0.0
+
+
+def test_power_rules():
+    x = Expression.variable("x")
+    assert x.pow_(Expression.number(1)).simplify().to_latex() == "x"
+    assert Expression.number(2).pow_(Expression.number(10)).simplify().evaluate({}) == 1024.0
+
+
+def test_nested_folding_completes_in_one_call():
+    expr = Expression.number(1).add(Expression.number(1)).mul(Expression.number(3))
+    assert expr.simplify().evaluate({}) == 6.0
+
+
+def test_division_is_exact_or_left_alone():
+    assert Expression.number(12).div(Expression.number(4)).simplify().evaluate({}) == 3.0
+    # 7/2 has no integer value; rounding it would be a silent precision loss.
+    seven_halves = Expression.number(7).div(Expression.number(2)).simplify()
+    assert seven_halves.kind().startswith("function")
+
+
+def test_large_powers_stay_exact_through_the_boundary():
+    # 2**64 is past what an f64 can represent without loss, so this proves the
+    # fold runs on the unlimited-precision integer path rather than a float.
+    big = Expression.number(2).pow_(Expression.number(64)).simplify()
+    assert big.to_latex() == str(2 ** 64)
+
+
+def test_symbolic_expressions_are_not_mangled():
+    expr = Expression.variable("x").add(Expression.number(1))
+    simplified = expr.simplify()
+    assert simplified.kind().startswith("function")
+    with pytest.raises(Exception):
+        simplified.evaluate({})
+
+
+def test_simplify_reaches_a_fixpoint():
+    once = Expression.number(2).add(Expression.number(3)).simplify()
+    assert not once.is_simplifiable(), "a simplified expression must be stable"
+
+
+def test_is_simplifiable_reports_honestly():
+    assert Expression.number(1).add(Expression.number(1)).is_simplifiable()
+    assert not Expression.variable("x").is_simplifiable()
+
+
+def test_named_constants_need_an_explicit_opt_in():
+    # A constant's cached float is an approximation; collapsing it by default
+    # would discard exactness without the caller asking.
+    two = Expression.constant("two", 2.0)
+    assert two.simplify().kind() == "constant"
+    assert two.simplify(allow_numeric_collapse=True).kind() == "number"
+
+
+def test_an_oversized_iteration_budget_is_rejected():
+    # Clamping silently would let a caller believe a budget was honoured.
+    with pytest.raises(ValueError):
+        Expression.number(1).add(Expression.number(1)).simplify(max_iterations=10 ** 9)
+
+
+def test_a_zero_budget_is_a_no_op():
+    expr = Expression.number(1).add(Expression.number(1))
+    assert expr.simplify(max_iterations=0).kind().startswith("function")
+
+
+# ---------------------------------------------------------------------------
+# Matrix algebra
+#
+# `Matrix` and `Tensor` were containers on the Python side: shape, indexing and
+# repr, with nothing that combined two of them. These pin the algebra through
+# the PyO3 boundary.
+# ---------------------------------------------------------------------------
+
+def _m(rows):
+    """Build a Matrix from a nested list of ints."""
+    return Matrix.from_rows([[Expression.number(v) for v in r] for r in rows])
+
+
+def _values(m):
+    return [c.evaluate({}) for c in m.simplified().cells()]
+
+
+def test_matrix_transpose():
+    m = _m([[1, 2, 3], [4, 5, 6]])
+    t = m.transpose()
+    assert t.shape == (3, 2)
+    assert _values(t) == [1.0, 4.0, 2.0, 5.0, 3.0, 6.0]
+
+
+def test_matrix_add_and_sub():
+    a = _m([[1, 2], [3, 4]])
+    b = _m([[10, 20], [30, 40]])
+    assert _values(a.add(b)) == [11.0, 22.0, 33.0, 44.0]
+    assert _values(b.sub(a)) == [9.0, 18.0, 27.0, 36.0]
+
+
+def test_matrix_shape_mismatch_raises():
+    a = _m([[1, 2], [3, 4]])
+    wrong = _m([[1, 2, 3]])
+    with pytest.raises(ValueError):
+        a.add(wrong)
+
+
+def test_matrix_product():
+    a = _m([[1, 2], [3, 4]])
+    b = _m([[5, 6], [7, 8]])
+    assert _values(a.matmul(b)) == [19.0, 22.0, 43.0, 50.0]
+    # The `@` operator routes to the same code.
+    assert _values(a @ b) == _values(a.matmul(b))
+
+
+def test_matrix_operators():
+    a = _m([[1, 2], [3, 4]])
+    b = _m([[10, 20], [30, 40]])
+    assert _values(a + b) == _values(a.add(b))
+    assert _values(b - a) == _values(b.sub(a))
+
+
+def test_matrix_scalar_multiplication():
+    a = _m([[1, 2], [3, 4]])
+    assert _values(a.scalar_mul(Expression.number(3))) == [3.0, 6.0, 9.0, 12.0]
+
+
+def test_matrix_trace_and_determinant():
+    a = _m([[1, 2], [3, 4]])
+    assert a.trace().evaluate({}) == 5.0
+    assert a.determinant().evaluate({}) == -2.0
+    assert _m([[6, 1, 1], [4, -2, 5], [2, 8, 7]]).determinant().evaluate({}) == -306.0
+
+
+def test_determinant_is_multiplicative_through_the_boundary():
+    a = _m([[2, 0, 1], [3, -1, 2], [1, 4, 0]])
+    b = _m([[1, 2, 0], [0, 1, 3], [2, 1, 1]])
+    assert (a @ b).determinant().evaluate({}) == pytest.approx(
+        a.determinant().evaluate({}) * b.determinant().evaluate({})
+    )
+
+
+def test_non_square_operations_raise():
+    a = _m([[1, 2, 3], [4, 5, 6]])
+    assert not a.is_square()
+    with pytest.raises(ValueError):
+        a.trace()
+    with pytest.raises(ValueError):
+        a.determinant()
+
+
+def test_determinant_order_cap_raises_rather_than_hanging():
+    big = Matrix.identity(9)
+    with pytest.raises(ValueError):
+        big.determinant()
+
+
+# ---------------------------------------------------------------------------
+# Tensor algebra
+# ---------------------------------------------------------------------------
+
+def _ramp(shape):
+    count = 1
+    for d in shape:
+        count *= d
+    return Tensor(shape, [Expression.number(i) for i in range(count)])
+
+
+def test_tensor_strides_are_row_major():
+    assert _ramp([2, 3, 4]).strides() == [12, 4, 1]
+
+
+def test_tensor_reshape_preserves_order():
+    t = _ramp([2, 6])
+    r = t.reshape([3, 4])
+    assert r.shape == [3, 4]
+    assert [c.evaluate({}) for c in r.cells()] == [c.evaluate({}) for c in t.cells()]
+
+
+def test_tensor_reshape_rejects_a_different_count():
+    with pytest.raises(ValueError):
+        _ramp([2, 6]).reshape([5, 5])
+
+
+def test_tensor_permute_is_the_transpose_at_rank_two():
+    t = _ramp([2, 3])
+    p = t.permute_axes([1, 0])
+    assert p.shape == [3, 2]
+    assert [c.evaluate({}) for c in p.cells()] == [0.0, 3.0, 1.0, 4.0, 2.0, 5.0]
+
+
+def test_tensor_permute_validates_its_argument():
+    t = _ramp([2, 3])
+    for bad in ([0, 0], [0, 2], [0]):
+        with pytest.raises(ValueError):
+            t.permute_axes(bad)
+
+
+def test_tensor_elementwise_operations():
+    a = _ramp([2, 2])
+    b = _ramp([2, 2])
+    assert [c.evaluate({}) for c in a.add(b).simplified().cells()] == [0.0, 2.0, 4.0, 6.0]
+    assert [c.evaluate({}) for c in a.hadamard(b).simplified().cells()] == [0.0, 1.0, 4.0, 9.0]
+    with pytest.raises(ValueError):
+        a.add(_ramp([4]))
+
+
+def test_tensor_set_writes_where_get_reads():
+    t = Tensor.zeros([2, 2, 2])
+    t.set([1, 0, 1], Expression.number(9))
+    assert t.get([1, 0, 1]).evaluate({}) == 9.0
+
+
+# ---------------------------------------------------------------------------
+# Dimensional analysis
+# ---------------------------------------------------------------------------
+
+def test_base_units_have_dimensions():
+    assert Unit("m", "meter").dimension() == "m"
+    assert Unit("kg", "kilogram").quantity() == "mass"
+
+
+def test_derived_units_have_dimensions_even_though_the_catalogue_omits_them():
+    # si_lookup("N") is None by design; the dimension still resolves.
+    assert arithma.si_lookup("N") is None
+    newton = Unit("N", "newton")
+    assert newton.dimension() == "m*kg*s^-2"
+    assert newton.quantity() == "force"
+    assert newton.dimension_exponents() == [1, 1, -2, 0, 0, 0, 0]
+
+
+def test_compatibility_distinguishes_unknown_from_incompatible():
+    metre = Unit("m", "meter")
+    second = Unit("s", "second")
+    assert metre.is_compatible_with(metre) is True
+    assert metre.is_compatible_with(second) is False
+    # "I cannot tell" must not be reported as "incompatible".
+    assert metre.is_compatible_with(Unit("zz", "unknown")) is None
+
+
+def test_module_level_dimension_helpers():
+    assert arithma.dimension_of("J") == "m^2*kg*s^-2"
+    assert arithma.dimension_of("zz") is None
+    assert arithma.dimension_symbol([1, 1, -2, 0, 0, 0, 0]) == "N"
+    assert arithma.base_dimensions() == ["m", "kg", "s", "A", "K", "mol", "cd"]
+    with pytest.raises(ValueError):
+        arithma.dimension_symbol([1, 2, 3])
+
+
+# ---------------------------------------------------------------------------
+# Matrix inverse and eigenvalues
+# ---------------------------------------------------------------------------
+
+def test_matrix_inverse_round_trips_to_the_identity():
+    m = _m([[4, 7], [2, 6]])
+    product = m @ m.inverse()
+    # Entries are exact symbolic quotients, but evaluating them to float
+    # rounds, so a product of rounded values needs a tolerance. Demanding
+    # bit-equality here would assert something false about floating point.
+    assert _values(product) == pytest.approx([1.0, 0.0, 0.0, 1.0], abs=1e-12)
+
+
+def test_matrix_inverse_of_a_three_by_three():
+    m = _m([[1, 2, 3], [4, 5, 6], [7, 8, 10]])
+    product = m @ m.inverse()
+    assert _values(product) == pytest.approx(
+        [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], abs=1e-12
+    )
+
+
+def test_a_singular_matrix_has_no_inverse():
+    m = _m([[1, 2], [2, 4]])
+    assert m.determinant().evaluate({}) == 0.0
+    with pytest.raises(ValueError):
+        m.inverse()
+
+
+def test_matrix_times_adjugate_is_determinant_times_identity():
+    m = _m([[1, 2, 3], [4, 5, 6], [7, 8, 10]])
+    det = m.determinant().evaluate({})
+    product = m @ m.adjugate()
+    assert _values(product) == pytest.approx(
+        [det, 0.0, 0.0, 0.0, det, 0.0, 0.0, 0.0, det], abs=1e-9
+    )
+
+
+def test_cofactors_and_minors():
+    m = _m([[1, 2, 3], [4, 5, 6], [7, 8, 10]])
+    assert m.minor(1, 1).shape == (2, 2)
+    assert _values(m.minor(1, 1)) == [1.0, 3.0, 7.0, 10.0]
+    assert m.cofactor(0, 0).evaluate({}) == 2.0
+    with pytest.raises(ValueError):
+        m.minor(5, 0)
+
+
+def test_eigenvalues_of_a_diagonal_matrix():
+    m = _m([[2, 0, 0], [0, 3, 0], [0, 0, 7]])
+    assert m.eigenvalues_real() == pytest.approx([2.0, 3.0, 7.0], abs=1e-9)
+
+
+def test_eigenvalues_sum_to_the_trace():
+    m = _m([[4, 1, 0], [1, 3, 1], [0, 1, 2]])
+    values = m.eigenvalues_real()
+    assert len(values) == 3
+    assert sum(values) == pytest.approx(m.trace().evaluate({}), abs=1e-6)
+
+
+def test_a_rotation_reports_no_real_eigenvalues():
+    # Spectrum is +/- i. Returning [] is the correct answer, not a failure.
+    m = _m([[0, -1], [1, 0]])
+    assert m.eigenvalues_real() == []
+
+
+def test_characteristic_polynomial_vanishes_at_the_eigenvalues():
+    m = _m([[2, 0], [0, 3]])
+    p = m.characteristic_polynomial("L")
+    assert p.evaluate({"L": 2.0}) == pytest.approx(0.0, abs=1e-12)
+    assert p.evaluate({"L": 3.0}) == pytest.approx(0.0, abs=1e-12)
+    assert abs(p.evaluate({"L": 5.0})) > 1e-9
+
+
+# ---------------------------------------------------------------------------
+# Tensor contraction
+# ---------------------------------------------------------------------------
+
+def test_tensordot_over_inner_axes_is_matrix_multiplication():
+    a = Tensor([2, 2], [Expression.number(v) for v in (1, 2, 3, 4)])
+    b = Tensor([2, 2], [Expression.number(v) for v in (5, 6, 7, 8)])
+    got = a.tensordot(b, [1], [0]).simplified()
+    assert got.shape == [2, 2]
+    assert [c.evaluate({}) for c in got.cells()] == [19.0, 22.0, 43.0, 50.0]
+
+
+def test_contraction_shapes_compose():
+    a = Tensor.zeros([2, 3, 4])
+    b = Tensor.zeros([4, 5, 6])
+    assert a.tensordot(b, [2], [0]).shape == [2, 3, 5, 6]
+
+
+def test_trace_drops_two_axes():
+    t = _ramp([3, 3])
+    traced = t.trace(0, 1).simplified()
+    assert traced.shape == []
+    # ramp([3,3]) is 0..8 row-major, so the diagonal is 0 + 4 + 8.
+    assert [c.evaluate({}) for c in traced.cells()] == [12.0]
+
+
+def test_outer_product_concatenates_shapes():
+    a = Tensor.zeros([2, 3])
+    b = Tensor.zeros([4])
+    assert a.outer(b).shape == [2, 3, 4]
+
+
+def test_contraction_validates_its_axes():
+    a = Tensor.zeros([2, 3])
+    b = Tensor.zeros([3, 2])
+    # Mismatched extents.
+    with pytest.raises(ValueError):
+        a.tensordot(b, [0], [0])
+    # Out of range.
+    with pytest.raises(ValueError):
+        a.tensordot(b, [5], [0])
+    # Unequal list lengths.
+    with pytest.raises(ValueError):
+        a.tensordot(b, [0, 1], [0])
+
+
+# ---------------------------------------------------------------------------
+# SI prefixes and unit conversion
+# ---------------------------------------------------------------------------
+
+def test_conversion_is_exact_for_powers_of_ten():
+    # A single net power of ten is applied, so these are exact, not 999.9999.
+    assert arithma.convert(1.0, "km", "m") == 1000.0
+    assert arithma.convert(1000.0, "m", "km") == 1.0
+    assert arithma.convert(1.0, "m", "mm") == 1000.0
+    assert arithma.convert(2.5, "km", "mm") == 2_500_000.0
+
+
+def test_conversion_refuses_incompatible_dimensions():
+    # Refusing this is the entire point of tracking dimensions.
+    with pytest.raises(ValueError):
+        arithma.convert(1.0, "m", "s")
+
+
+def test_conversion_refuses_an_unknown_unit():
+    with pytest.raises(ValueError):
+        arithma.convert(1.0, "zz", "m")
+
+
+def test_kilogram_is_a_base_unit_not_kilo_grams():
+    # The classic trap: kg is the SI base unit for mass, and g is not in the
+    # base table at all, so kg must not decompose.
+    assert arithma.split_unit_symbol("kg") == (0, "kg")
+    assert arithma.split_unit_symbol("km") == (3, "m")
+    assert arithma.split_unit_symbol("ms") == (-3, "s")
+
+
+def test_prefix_micro_is_ascii():
+    # The project's symbols are Latin letters; micro is "u", not the micro sign.
+    assert arithma.prefix_power("u") == -6
+    assert arithma.prefix_power("k") == 3
+    assert arithma.prefix_power("zz") is None
+    for symbol, name, power in arithma.si_prefixes():
+        assert symbol.isascii(), f"prefix {symbol!r} must be ASCII"
+        assert name.isascii(), f"prefix name {name!r} must be ASCII"
+
+
+def test_prefixed_units_carry_the_base_dimension():
+    assert Unit("km", "kilometre").dimension() == "m"
+    assert Unit("km", "kilometre").scale_to_base() == 1000.0
+    assert Unit("m", "metre").scale_to_base() == 1.0
+
+
+# ---------------------------------------------------------------------------
+# Like-term collection
+# ---------------------------------------------------------------------------
+
+def test_like_terms_collect():
+    x = Expression.variable("x")
+    got = x.add(x).simplify()
+    # 2*x is symbolic, so it must not evaluate to a number.
+    with pytest.raises(Exception):
+        got.evaluate({})
+    assert got.evaluate({"x": 5.0}) == 10.0
+
+
+def test_existing_coefficients_add():
+    x = Expression.variable("x")
+    two_x = Expression.number(2).mul(x)
+    three_x = Expression.number(3).mul(x)
+    assert two_x.add(three_x).simplify().evaluate({"x": 2.0}) == 10.0
+
+
+def test_opposite_terms_cancel():
+    x = Expression.variable("x")
+    got = Expression.number(3).mul(x).add(Expression.number(-3).mul(x)).simplify()
+    assert got.kind() == "number"
+    assert got.evaluate({}) == 0.0
+
+
+def test_equal_factors_become_a_power():
+    x = Expression.variable("x")
+    got = x.mul(x).simplify()
+    assert got.evaluate({"x": 3.0}) == 9.0
+
+
+def test_collection_is_syntactic_and_stable():
+    # x + y has nothing to collect, so it must report itself already simple --
+    # otherwise a caller looping until no-change would never terminate.
+    x, y = Expression.variable("x"), Expression.variable("y")
+    assert not x.add(y).is_simplifiable()
+    # And a collected result is stable on a second pass.
+    assert not x.add(x).simplify().is_simplifiable()

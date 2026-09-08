@@ -115,7 +115,14 @@ impl ArithmaSIPrefix {
         }
     }
 
-    /// Standard symbol for this prefix (e.g. "k" for kilo, "Î¼" for micro).
+    /// Standard symbol for this prefix, ASCII only.
+    ///
+    /// Micro is `"u"`, not the micro sign. Two reasons, and the second is the
+    /// one that bites: the project's naming rule is Latin letters only, and
+    /// `crate::unit`'s prefix table -- which drives `split_unit_symbol` and
+    /// `ArithmaUnit::convert` -- spells it `"u"`. Two spellings of micro in
+    /// one crate mean `si_prefix_power(Micro.symbol())` returns `None`, so the
+    /// two modules silently disagree about what `um` denotes.
     pub fn symbol(&self) -> &'static str {
         match self {
             Self::Yotta => "Y",
@@ -132,7 +139,7 @@ impl ArithmaSIPrefix {
             Self::Deci => "d",
             Self::Centi => "c",
             Self::Milli => "m",
-            Self::Micro => "Î¼",
+            Self::Micro => "u",
             Self::Nano => "n",
             Self::Pico => "p",
             Self::Femto => "f",
@@ -255,12 +262,48 @@ impl ArithmaExpression {
         ArithmaExpression::Number(ArithmaInteger::from_u64(n))
     }
 
-    /// Smart f64 constructor.
+    /// Lossless f64 constructor.
     ///
-    /// Currently routes through the integer constructor when `f` is an exact
-    /// integer in the i64 range; otherwise wraps `f` as a `Number / Number`
-    /// rational with a fixed denominator scale. NaN and ±∞ get the matching
-    /// `ArithmaInteger` sentinel.
+    /// Represents `f` as an exact rational with a DECIMAL denominator, taken
+    /// from the shortest decimal string that round-trips to `f`. NaN and ±∞
+    /// get the matching `ArithmaInteger` sentinel.
+    ///
+    /// WHY A DECIMAL DENOMINATOR
+    /// -------------------------
+    /// Losslessness is the point of this library, and there are two ways to
+    /// be lossless about an f64. Both round-trip; they differ in what they
+    /// say the number IS.
+    ///
+    /// ```text
+    ///     binary   0.1 -> 3602879701896397 / 2^55
+    ///     decimal  0.1 -> 1 / 10
+    /// ```
+    ///
+    /// The binary form is the exact content of the 64 bits, but it is not the
+    /// number anybody wrote, and it makes every subsequent denominator a
+    /// power of two that never cancels against a decimal one. The decimal
+    /// form is equally exact -- the shortest round-tripping representation
+    /// identifies the f64 uniquely -- and it is the rational a reader means
+    /// by "0.1", so denominators stay small and cancel.
+    ///
+    /// WHAT THIS REPLACED
+    /// ------------------
+    /// A fixed-scale rational, `round(f * S) / S`, which could not represent
+    /// values outside a narrow window and failed SILENTLY:
+    ///
+    /// ```text
+    ///     S = 1e15  (|f| < 9000)   usable [1e-15, 9.2e3]
+    ///     S = 1e9   (otherwise)    usable [1e-9,  9.2e9], then `as i64`
+    ///                              SATURATES at i64::MAX
+    /// ```
+    ///
+    /// Measured: `1.9e-93` became exactly `0.0`; `4.757e34` became
+    /// `9223372036.854776`. Raising the scale cannot fix it -- an i64
+    /// rational carries about 19 significant digits wherever the point is
+    /// put, so 1e9 -> 1e15 only traded the ceiling (9.2e9 -> 9.2e3) for
+    /// precision at the bottom. There is no fixed scale that covers a
+    /// consumer spanning 128 decades. The decimal form below has no scale
+    /// constant and no range limit beyond the arbitrary-precision integer.
     pub fn from_f64(f: f64) -> Self {
         if f.is_nan() {
             return ArithmaExpression::Number(ArithmaInteger::nan());
@@ -272,37 +315,127 @@ impl ArithmaExpression {
             }
             return ArithmaExpression::Number(inf);
         }
+
+        // EXACT integer test. This used to read
+        //     (f - rounded).abs() <= f64::EPSILON * f.abs().max(1.0)
+        // whose `.max(1.0)` makes the tolerance an ABSOLUTE 2.22e-16 for
+        // every |f| < 1. Any value below about 2.2e-16 therefore satisfied it
+        // against `rounded == 0.0` and was returned as the integer ZERO --
+        // 1.9e-93 never reached the rational path at all. An epsilon test is
+        // the wrong tool regardless: a float either is an integer or it is
+        // not, and snapping a near-integer silently discards exactly the
+        // information this library exists to keep.
         let rounded = f.round();
-        if (f - rounded).abs() <= f64::EPSILON * f.abs().max(1.0)
-            && rounded >= i64::MIN as f64
-            && rounded <= i64::MAX as f64
-        {
+        if f == rounded && rounded >= i64::MIN as f64 && rounded <= i64::MAX as f64 {
             return ArithmaExpression::from_i64(rounded as i64);
         }
-        // Fall back to a fixed-scale rational. Use 1e15 so the rational
-        // representation preserves the full ~15-digit precision of IEEE 754
-        // f64; this is critical for downstream `triple_assert` checks at
-        // rel=1e-12 (regression caught in v2.0.4: the old 1e9 scale
-        // truncated every float literal to 9 decimal places, e.g.
-        // Pi -> 3.141592654 instead of 3.141592653589793).
-        // Falls back to the legacy 1e9 scale for large |f| where 1e15
-        // would overflow i64 (i64::MAX is ~9.2e18, so 1e15 stays safe up
-        // to |f| ~ 9000).
-        const PRECISE_SCALE: f64 = 1.0e15;
-        const PRECISE_MAGNITUDE_BOUND: f64 = 9.0e3;
-        if f.abs() < PRECISE_MAGNITUDE_BOUND {
-            let num = (f * PRECISE_SCALE).round() as i64;
-            return ArithmaExpression::div(
-                ArithmaExpression::from_i64(num),
-                ArithmaExpression::from_i64(PRECISE_SCALE as i64),
-            );
+
+        Self::from_decimal_string(f).unwrap_or_else(|| Self::from_binary_rational(f))
+    }
+
+    /// Build the exact rational `digits / 10^k` from the shortest decimal
+    /// string that round-trips to `f`. Rust's `{:e}` emits exactly that, so
+    /// no precision is chosen here and none is lost.
+    fn from_decimal_string(f: f64) -> Option<Self> {
+        let rendered = format!("{f:e}");
+        let (mantissa_part, exponent_part) = rendered.split_once('e')?;
+        let exponent: i64 = exponent_part.parse().ok()?;
+
+        let negative = mantissa_part.starts_with('-');
+        let digits_only: String = mantissa_part
+            .trim_start_matches(['-', '+'])
+            .chars()
+            .filter(|c| *c != '.')
+            .collect();
+        if digits_only.is_empty() || !digits_only.chars().all(|c| c.is_ascii_digit()) {
+            return None;
         }
-        let scale: f64 = 1.0e9;
-        let num = (f * scale).round() as i64;
-        ArithmaExpression::div(
-            ArithmaExpression::from_i64(num),
-            ArithmaExpression::from_i64(scale as i64),
-        )
+        let fractional_digits = mantissa_part
+            .split_once('.')
+            .map(|(_, tail)| tail.len() as i64)
+            .unwrap_or(0);
+
+        // f = +/- digits_only * 10^(exponent - fractional_digits)
+        let power = exponent - fractional_digits;
+
+        let mut numerator = Self::big_from_decimal_digits(&digits_only)?;
+        if power >= 0 {
+            let scale = u32::try_from(power).ok()?;
+            if scale > 0 {
+                numerator =
+                    numerator.checked_mul(&ArithmaInteger::from_u64(10).checked_pow(scale)?)?;
+            }
+            if negative {
+                numerator.value.set_negative(true);
+            }
+            return Some(ArithmaExpression::Number(numerator));
+        }
+        let scale = u32::try_from(-power).ok()?;
+        if negative {
+            numerator.value.set_negative(true);
+        }
+        Some(ArithmaExpression::div(
+            ArithmaExpression::Number(numerator),
+            ArithmaExpression::Number(ArithmaInteger::from_u64(10).checked_pow(scale)?),
+        ))
+    }
+
+    /// Horner-accumulate a decimal digit string into an arbitrary-precision
+    /// integer, so a mantissa longer than u64 is still exact.
+    fn big_from_decimal_digits(digits: &str) -> Option<ArithmaInteger> {
+        let ten = ArithmaInteger::from_u64(10);
+        let mut acc = ArithmaInteger::zero();
+        for ch in digits.chars() {
+            let digit = ch.to_digit(10)?;
+            acc = acc
+                .checked_mul(&ten)?
+                .checked_add(&ArithmaInteger::from_u64(u64::from(digit)))?;
+        }
+        Some(acc)
+    }
+
+    /// Exact binary rational `mantissa / 2^k` straight from the IEEE-754
+    /// bits. Used only if the decimal route fails; it is equally lossless but
+    /// yields power-of-two denominators that do not cancel against decimals.
+    fn from_binary_rational(f: f64) -> Self {
+        let bits = f.to_bits();
+        let negative = (bits >> 63) != 0;
+        let raw_exponent = ((bits >> 52) & 0x7ff) as i64;
+        let raw_mantissa = bits & 0x000f_ffff_ffff_ffff;
+        let (mut mantissa, mut exponent) = if raw_exponent == 0 {
+            (raw_mantissa, -1074i64) // subnormal: no implicit leading bit
+        } else {
+            (raw_mantissa | 0x0010_0000_0000_0000, raw_exponent - 1075)
+        };
+        if mantissa == 0 {
+            return ArithmaExpression::Number(ArithmaInteger::zero());
+        }
+        let shift = mantissa.trailing_zeros();
+        mantissa >>= shift;
+        exponent += i64::from(shift);
+
+        let two = ArithmaInteger::from_u64(2);
+        let built = u32::try_from(exponent.unsigned_abs()).ok().and_then(|k| {
+            let mut numerator = ArithmaInteger::from_u64(mantissa);
+            if exponent >= 0 {
+                if k > 0 {
+                    numerator = numerator.checked_mul(&two.checked_pow(k)?)?;
+                }
+                if negative {
+                    numerator.value.set_negative(true);
+                }
+                Some(ArithmaExpression::Number(numerator))
+            } else {
+                if negative {
+                    numerator.value.set_negative(true);
+                }
+                Some(ArithmaExpression::div(
+                    ArithmaExpression::Number(numerator),
+                    ArithmaExpression::Number(two.checked_pow(k)?),
+                ))
+            }
+        });
+        built.unwrap_or_else(|| ArithmaExpression::constant("", None, Some(f), true))
     }
 
     /// Variable expression.
@@ -455,13 +588,29 @@ pub trait Differentiable {
 ///
 /// Mirrors `pt_simplification_method::PTSimplificationConfig`. Wave 2 ships a
 /// minimal default; Wave 3 fills in the full rule set.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimplificationConfig {
     /// Maximum iterations the simplifier will run before bailing.
     pub max_iterations: usize,
     /// If true, the simplifier may use cached f64 values to drop precision-safe
     /// constants into literal form.
     pub allow_numeric_collapse: bool,
+}
+
+impl Default for SimplificationConfig {
+    /// Usable defaults.
+    ///
+    /// This was `#[derive(Default)]`, which gave `max_iterations: 0` -- a
+    /// simplifier that is a no-op by construction, and one that made the
+    /// no-op implementation impossible to distinguish from a working one.
+    /// 32 passes is far more than any fixpoint needs (folding converges in
+    /// one pass per level of nesting) while still bounding the work.
+    fn default() -> Self {
+        Self {
+            max_iterations: 32,
+            allow_numeric_collapse: false,
+        }
+    }
 }
 
 /// Simplify an expression in place or by value.
@@ -687,14 +836,22 @@ impl Differentiable for ArithmaExpression {
 }
 
 impl Simplify for ArithmaExpression {
-    fn simplify(&self, _config: &SimplificationConfig) -> Self {
-        // Trivial placeholder: returning the input unchanged is a valid
-        // simplification (it just performs no work).
-        self.clone()
+    /// Simplified copy. Delegates to the iterative engine so there is exactly
+    /// one implementation of the rewrite rules.
+    fn simplify(&self, config: &SimplificationConfig) -> Self {
+        let mut out = self.clone();
+        let _ = out.simplify_in_place(config);
+        out
     }
 
-    fn simplify_in_place(&mut self, _config: &SimplificationConfig) -> bool {
-        false
+    /// Simplify in place, reporting whether anything changed.
+    ///
+    /// This trait was a stub returning `false` while the rewrite rules were
+    /// still to be written. It now routes to
+    /// [`crate::expression::iterative::simplify_iterative`], which runs
+    /// bottom-up passes to a fixpoint without recursion.
+    fn simplify_in_place(&mut self, config: &SimplificationConfig) -> bool {
+        crate::expression::iterative::simplify_iterative(self, config)
     }
 }
 
@@ -749,5 +906,77 @@ mod tests {
         let out = expr.simplify(&cfg);
         // Default simplify is a no-op — equal-shape result.
         assert!(matches!(out, ArithmaExpression::Variable(_)));
+    }
+
+    /// `from_f64` must be LOSSLESS for every finite input.
+    ///
+    /// The predecessor wrote `round(f * S) / S` for a fixed `S`, which turned
+    /// 1.9e-93 into exactly 0.0 and saturated 4.757e34 at i64::MAX / 1e9.
+    /// Both failures were silent -- a consumer spanning 128 decades had
+    /// computations replaced by zeros with nothing raised.
+    #[test]
+    fn from_f64_round_trips_across_the_full_f64_range() {
+        let env = std::collections::HashMap::new();
+        for &value in &[
+            1.903_857_950_822_914_4e-93_f64,
+            4.757_399_129_595_567e34,
+            std::f64::consts::PI,
+            0.1,
+            -2.5e-40,
+            1e300,
+            1e-308,
+            0.3,
+            1.0 / 3.0,
+            -7.5,
+        ] {
+            let got = ArithmaExpression::from_f64(value)
+                .evaluate(&env)
+                .unwrap_or_else(|e| panic!("{value:e} failed to evaluate: {e:?}"));
+            assert_eq!(got, value, "from_f64 lost {value:e} (got {got:e})");
+        }
+    }
+
+    /// A decimal literal should come back as a decimal rational, not a
+    /// power-of-two one: 0.1 is 1/10, not 3602879701896397/2^55. Both are
+    /// exact; only the first cancels against other decimals.
+    #[test]
+    fn from_f64_uses_a_decimal_denominator() {
+        match ArithmaExpression::from_f64(0.1) {
+            ArithmaExpression::Function(_, ref args) if args.len() == 2 => {
+                let env = std::collections::HashMap::new();
+                let denominator = args[1].evaluate(&env).expect("denominator evaluates");
+                assert_eq!(denominator, 10.0, "0.1 should be 1/10");
+            }
+            other => panic!("expected a division, got {other:?}"),
+        }
+    }
+
+    /// Tiny values must not be swallowed by the integer fast path. The old
+    /// guard compared against an ABSOLUTE 2.22e-16 for every |f| < 1, so
+    /// anything smaller was returned as the integer zero.
+    #[test]
+    fn tiny_values_are_not_snapped_to_zero() {
+        let env = std::collections::HashMap::new();
+        for &value in &[1e-17_f64, 2.2e-16, 5e-30, 1.9e-93] {
+            let got = ArithmaExpression::from_f64(value).evaluate(&env).unwrap();
+            assert_ne!(got, 0.0, "{value:e} was snapped to zero");
+        }
+    }
+
+    /// `to_f64` used to read a capped 32-byte PREFIX of the magnitude, which
+    /// returns 0.0 for any value whose low 32 bytes are zero -- 2^360 is
+    /// exactly that shape, and it is the denominator of small floats.
+    #[test]
+    fn large_integers_convert_without_truncation() {
+        let two = crate::integer::ArithmaInteger::from_u64(2);
+        for &exponent in &[64_u32, 100, 200, 360, 900] {
+            let power = two.checked_pow(exponent).expect("power fits");
+            let got = power.to_f64();
+            let want = 2.0_f64.powi(exponent as i32);
+            assert!(
+                (got - want).abs() <= want * 1e-12,
+                "2^{exponent} converted to {got:e}, expected {want:e}"
+            );
+        }
     }
 }

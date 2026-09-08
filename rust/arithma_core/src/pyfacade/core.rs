@@ -1,4 +1,4 @@
-//====== Arithma/rust/arithma_core/src/pyfacade.rs ======//
+//====== Arithma/rust/arithma_core/src/pyfacade/core.rs ======//
 //!copyright (c) 2025 Andrew Keith Watts. All rights reserved.
 //!
 //!This is the intellectual property of Andrew Keith Watts. Unauthorized
@@ -37,11 +37,26 @@
 //! pathway and does not call `Emit::emit`. Centralising LaTeX in the facade
 //! avoids breaking the wider crate's still-incomplete `Emit` trait contract.
 
+// ─── Lint policy for this file ──────────────────────────────────────────────
+//
+// `useless_conversion`: pyo3 0.22's `#[pymethods]` expansion emits a
+// `PyErr -> PyErr` conversion in the trampoline it generates around every
+// method returning `PyResult<T>`. Clippy attributes that to our return type.
+// It is macro output, not code we wrote, and there is no way to spell the
+// signature that avoids it. 19 occurrences, all identical.
+#![allow(clippy::useless_conversion)]
+// `inherent_to_string`: clippy wants `impl Display` instead. That would change
+// the Python surface -- callers use `Integer.to_string()`, and pyo3 exposes
+// inherent `#[pymethods]`, not trait impls. The lint is right for ordinary
+// Rust and wrong at an FFI boundary.
+#![allow(clippy::inherent_to_string)]
+
 use pyo3::exceptions::{PyKeyError, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyInt, PyList, PyString};
 
-use crate::expression::{ArithmaBindings, ArithmaExpression, Evaluable};
+use crate::expression::iterative::{simplify_iterative, MAX_ITERATION_CEILING};
+use crate::expression::{ArithmaBindings, ArithmaExpression, Evaluable, SimplificationConfig};
 use crate::function::ArithmaFunction;
 use crate::integer::{flag, ArithmaInteger, ArithmaInternalInteger};
 use crate::variable::{ArithmaVariable, ArithmaVariableValue};
@@ -116,7 +131,7 @@ fn expression_to_latex(expr: &ArithmaExpression) -> String {
     fn wrap(child: &ArithmaExpression, min_prec: u8) -> String {
         let s = expression_to_latex(child);
         if precedence(child) < min_prec {
-            format!("\\left({}\\right)", s)
+            format!("\\left({s}\\right)")
         } else {
             s
         }
@@ -266,7 +281,7 @@ fn expression_to_latex(expr: &ArithmaExpression) -> String {
                         .map(expression_to_latex)
                         .collect::<Vec<_>>()
                         .join(", ");
-                    format!("\\operatorname{{{:?}}}\\left({}\\right)", other, inside)
+                    format!("\\operatorname{{{other:?}}}\\left({inside}\\right)")
                 }
             }
         }
@@ -324,7 +339,7 @@ fn unary_function(name: &str, args: &[ArithmaExpression]) -> String {
     if args.len() == 1 {
         format!("{}\\left({}\\right)", name, expression_to_latex(&args[0]))
     } else {
-        format!("{}\\left(?\\right)", name)
+        format!("{name}\\left(?\\right)")
     }
 }
 
@@ -393,7 +408,7 @@ fn arithma_integer_from_decimal_string(s: &str) -> Result<ArithmaInteger, String
         _ => (false, trimmed),
     };
     if digits_str.is_empty() || !digits_str.bytes().all(|b| b.is_ascii_digit()) {
-        return Err(format!("invalid integer literal: {:?}", s));
+        return Err(format!("invalid integer literal: {s:?}"));
     }
     // Build little-endian byte vector via repeated *10 + digit on a byte vec.
     let mut bytes: Vec<u8> = vec![0];
@@ -602,8 +617,7 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmaExpression) -> PyResul
         ArithmaExpression::Function(func, args) => {
             let tag = function_tag(func).ok_or_else(|| {
                 PyValueError::new_err(format!(
-                    "Expression.to_compact: operator {:?} is not supported by the compact schema",
-                    func
+                    "Expression.to_compact: operator {func:?} is not supported by the compact schema"
                 ))
             })?;
             let items = PyList::empty_bound(py);
@@ -678,7 +692,7 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmaExpression) -> PyResul
 /// Inverse of [`expression_to_compact_py`]. Walks a Python list/tuple matching
 /// the compact schema and reconstructs the corresponding `ArithmaExpression`.
 fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmaExpression> {
-    let lst: Bound<'_, PyList> = blob.downcast::<PyList>().map(|l| l.clone()).or_else(|_| {
+    let lst: Bound<'_, PyList> = blob.downcast::<PyList>().cloned().or_else(|_| {
         // Allow tuples too — JSON round-trip from Python typically yields lists,
         // but tuples are equally natural to write at the call site.
         let as_seq: Vec<Bound<'_, PyAny>> = blob.extract().map_err(|_| {
@@ -740,8 +754,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmaExpres
             let op_tag: String = lst.get_item(1)?.extract()?;
             let func = function_from_tag(&op_tag).ok_or_else(|| {
                 PyValueError::new_err(format!(
-                    "Expression.from_compact: unsupported operator tag {:?}",
-                    op_tag
+                    "Expression.from_compact: unsupported operator tag {op_tag:?}"
                 ))
             })?;
             let mut args: Vec<ArithmaExpression> = Vec::with_capacity(lst.len() - 2);
@@ -817,8 +830,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmaExpres
             })
         }
         other => Err(PyValueError::new_err(format!(
-            "Expression.from_compact: unknown node tag {:?}",
-            other
+            "Expression.from_compact: unknown node tag {other:?}"
         ))),
     }
 }
@@ -920,6 +932,57 @@ impl Expression {
 
     fn neg(&self) -> Self {
         Self::from_inner(ArithmaExpression::neg(self.inner.clone()))
+    }
+
+    // -------- simplification --------
+
+    /// Return a simplified copy of this expression.
+    ///
+    /// Exact throughout: numeric folding goes through unlimited-precision
+    /// integer arithmetic, so `7 / 2` stays a quotient rather than rounding.
+    /// Rewrites cover constant folding, additive and multiplicative
+    /// identities, absorbing zero, and the power rules.
+    ///
+    /// `max_iterations` bounds the fixpoint loop and `allow_numeric_collapse`
+    /// permits named constants with a cached value to become literals -- off
+    /// by default, because a cached f64 is an approximation.
+    #[pyo3(signature = (max_iterations = 32, allow_numeric_collapse = false))]
+    fn simplify(&self, max_iterations: usize, allow_numeric_collapse: bool) -> PyResult<Self> {
+        if max_iterations > MAX_ITERATION_CEILING {
+            return Err(PyValueError::new_err(format!(
+                "max_iterations must be <= {MAX_ITERATION_CEILING}, got {max_iterations}"
+            )));
+        }
+        debug_assert!(max_iterations <= MAX_ITERATION_CEILING, "cap not enforced");
+        let config = SimplificationConfig {
+            max_iterations,
+            allow_numeric_collapse,
+        };
+        let mut out = self.inner.clone();
+        let _ = simplify_iterative(&mut out, &config);
+        // The result must be a fixpoint: a caller that loops until nothing
+        // changes would otherwise never terminate.
+        debug_assert!(
+            max_iterations == 0 || !simplify_iterative(&mut out.clone(), &config),
+            "simplify did not reach a fixpoint"
+        );
+        Ok(Self::from_inner(out))
+    }
+
+    /// True if simplification would change this expression.
+    ///
+    /// Useful for deciding whether to re-render or re-transmit a tree without
+    /// paying to compare two of them.
+    #[pyo3(signature = (max_iterations = 32, allow_numeric_collapse = false))]
+    fn is_simplifiable(&self, max_iterations: usize, allow_numeric_collapse: bool) -> bool {
+        debug_assert!(!matches!(self.inner, ArithmaExpression::Variable(ref v) if v.is_empty()));
+        let budget = max_iterations.min(MAX_ITERATION_CEILING);
+        let config = SimplificationConfig {
+            max_iterations: budget,
+            allow_numeric_collapse,
+        };
+        let mut probe = self.inner.clone();
+        simplify_iterative(&mut probe, &config)
     }
 
     // -------- transcendentals --------
@@ -1048,7 +1111,7 @@ impl Expression {
                 .extract()
                 .map_err(|_| PyTypeError::new_err("evaluate: bindings keys must be str"))?;
             let v: f64 = val.extract().map_err(|_| {
-                PyTypeError::new_err(format!("evaluate: binding {:?} must be number", k))
+                PyTypeError::new_err(format!("evaluate: binding {k:?} must be number"))
             })?;
             bindings.insert(k, v);
         }
@@ -1172,7 +1235,7 @@ impl Expression {
             ArithmaExpression::Number(_) => "number".into(),
             ArithmaExpression::Variable(_) => "variable".into(),
             ArithmaExpression::Constant { .. } => "constant".into(),
-            ArithmaExpression::Function(f, _) => format!("function:{:?}", f),
+            ArithmaExpression::Function(f, _) => format!("function:{f:?}"),
             ArithmaExpression::Sum { .. } => "sum".into(),
             ArithmaExpression::Product { .. } => "product".into(),
             ArithmaExpression::Limit { .. } => "limit".into(),
@@ -1377,13 +1440,14 @@ impl Variable {
 }
 
 // ============================================================================
-// Module entry point.
+// Registration
 // ============================================================================
 
-/// `arithma._arithma_core` module entry point. Maturin invokes this through
-/// the `[tool.maturin] module-name` setting in `pyproject.toml`.
-#[pymodule]
-fn _arithma_core(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+/// Register this module's surface on the extension module.
+///
+/// Kept here rather than in `mod.rs` so each domain owns its own registration
+/// and adding a class cannot be forgotten in a second place.
+pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version_rust, m)?)?;
     m.add_function(wrap_pyfunction!(is_rust_backend, m)?)?;
     m.add_class::<Expression>()?;

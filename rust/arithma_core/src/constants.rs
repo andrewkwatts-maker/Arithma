@@ -105,9 +105,93 @@ impl ArithmaConstants {
     }
 }
 
+/// ASCII spellings for the constants whose canonical symbol is not ASCII.
+///
+/// 21 of the 30 default constants are keyed by their mathematical glyph --
+/// `pi`, `tau`, `phi`, `sqrt2`, `zeta3` and friends are stored as the actual
+/// characters. That is correct for rendering, and hostile for lookup: a caller
+/// has to produce the glyph to ask for the value, which is awkward from a
+/// keyboard, fragile across source encodings, and impossible in an ASCII-only
+/// identifier position.
+///
+/// This table adds a plain-letter spelling for each. The canonical glyph keeps
+/// working -- nothing is renamed or removed; these are additional entry points.
+///
+/// Ordered pairs of `(ascii_alias, canonical_symbol)`. Kept as a sorted `const`
+/// slice rather than a lazily-built map: it is small, fixed at compile time,
+/// and avoids a heap allocation on the lookup path (safety-critical standard 3,
+/// no heap allocation after initialisation).
+const ASCII_ALIASES: &[(&str, &str)] = &[
+    ("alphaF", "\u{3b1}_F"),
+    ("conway", "\u{3bb}"),
+    ("delta", "\u{3b4}"),
+    ("digamma1", "\u{3c8}(1)"),
+    ("euler_mascheroni", "\u{3b3}"),
+    ("expPi", "eToPow\u{3c0}"),
+    ("feigenbaum_alpha", "\u{3b1}_F"),
+    ("feigenbaum_delta", "\u{3b4}"),
+    ("gamma", "\u{3b3}"),
+    ("golden_ratio", "\u{3c6}"),
+    ("lambda", "\u{3bb}"),
+    ("phi", "\u{3c6}"),
+    ("pi", "\u{3c0}"),
+    ("pi_fourThirds", "\u{3c0}fourThirds"),
+    ("pi_half", "\u{3c0}half"),
+    ("pi_quarter", "\u{3c0}quarter"),
+    ("pi_squaredHalf", "\u{3c0}SquaredHalf"),
+    ("pi_third", "\u{3c0}third"),
+    ("plastic", "\u{3c1}"),
+    ("psi1", "\u{3c8}(1)"),
+    ("rho", "\u{3c1}"),
+    ("salem", "\u{3c3}"),
+    ("sigma", "\u{3c3}"),
+    ("sqrt2", "\u{221a}2"),
+    ("sqrt3", "\u{221a}3"),
+    ("sqrt5", "\u{221a}5"),
+    ("sqrtPi", "\u{221a}\u{3c0}"),
+    ("tau", "\u{3c4}"),
+    ("zeta3", "\u{3b6}(3)"),
+];
+
+/// Resolve an ASCII alias to its canonical symbol, if one exists.
+///
+/// Linear scan over a fixed 29-entry table: bounded by construction
+/// (safety-critical standard 2), no allocation, and faster than hashing for
+/// this size.
+pub fn resolve_alias(symbol: &str) -> Option<&'static str> {
+    debug_assert!(!ASCII_ALIASES.is_empty(), "alias table must not be empty");
+    for (alias, canonical) in ASCII_ALIASES {
+        if *alias == symbol {
+            debug_assert!(!canonical.is_empty(), "alias must map to a real symbol");
+            return Some(canonical);
+        }
+    }
+    None
+}
+
+/// Every ASCII alias, for discovery and documentation.
+pub fn ascii_aliases() -> &'static [(&'static str, &'static str)] {
+    ASCII_ALIASES
+}
+
 /// Look up a symbol in the global registry.
+///
+/// Tries the symbol exactly as given, then falls back to the ASCII alias table
+/// so `lookup_symbol("pi")` finds the constant stored under its glyph. Exact
+/// matches always win, so a caller who registers their own `pi` shadows the
+/// alias rather than being silently overridden by it.
 pub fn lookup_symbol(symbol: &str) -> Option<ArithmaExpression> {
-    SYMBOL_REGISTRY.read().get(symbol).cloned()
+    debug_assert!(
+        !symbol.is_empty(),
+        "lookup_symbol requires a non-empty symbol"
+    );
+    let registry = SYMBOL_REGISTRY.read();
+    if let Some(found) = registry.get(symbol) {
+        return Some(found.clone());
+    }
+    let canonical = resolve_alias(symbol)?;
+    debug_assert_ne!(canonical, symbol, "alias must differ from its input");
+    registry.get(canonical).cloned()
 }
 
 /// Register a symbol. Errors if the symbol is already present (use
@@ -281,5 +365,82 @@ mod tests {
     fn entry_without_value_or_expression_is_rejected() {
         let bad = r#"[{"symbol":"zz","enabled":true}]"#;
         assert!(load_constants_from_json(bad).is_err());
+    }
+    // ─── ASCII aliases ─────────────────────────────────────────────────────
+
+    #[test]
+    fn every_alias_target_is_a_real_default_constant() {
+        // Guards against a typo in the alias table silently producing a
+        // lookup that always returns None.
+        let loaded = ArithmaConstants::initialize_defaults().expect("defaults must load");
+        assert!(loaded > 0, "no default constants were registered");
+        for (alias, canonical) in ascii_aliases() {
+            assert!(
+                lookup_symbol(canonical).is_some(),
+                "alias {alias:?} points at {canonical:?}, which is not registered"
+            );
+        }
+    }
+
+    #[test]
+    fn ascii_aliases_resolve_to_the_same_value_as_the_glyph() {
+        let _ = ArithmaConstants::initialize_defaults().expect("defaults must load");
+        let via_alias = lookup_symbol("pi").expect("pi must resolve via alias");
+        let via_glyph = lookup_symbol("\u{3c0}").expect("glyph must resolve");
+        assert_eq!(
+            via_alias.to_f64(),
+            via_glyph.to_f64(),
+            "alias and glyph must yield the same constant"
+        );
+    }
+
+    #[test]
+    fn the_common_ascii_spellings_all_resolve() {
+        let _ = ArithmaConstants::initialize_defaults().expect("defaults must load");
+        for name in [
+            "pi", "tau", "phi", "gamma", "sqrt2", "sqrt3", "sqrt5", "zeta3",
+        ] {
+            assert!(
+                lookup_symbol(name).is_some(),
+                "{name} should be reachable without typing a glyph"
+            );
+        }
+    }
+
+    /// Serialises the tests that mutate the process-wide `SYMBOL_REGISTRY`.
+    /// `cargo test` runs tests in parallel, so a test that shadows a real
+    /// symbol would otherwise be visible to any test looking that symbol up.
+    static REGISTRY_TEST_LOCK: parking_lot::Mutex<()> = parking_lot::Mutex::new(());
+
+    #[test]
+    fn an_exact_match_beats_an_alias() {
+        let _guard = REGISTRY_TEST_LOCK.lock();
+        // A caller registering their own `pi` must shadow the alias, not be
+        // silently overridden by it.
+        let _ = ArithmaConstants::initialize_defaults().expect("defaults must load");
+        reregister_symbol("pi".to_string(), ArithmaExpression::from_f64(42.0));
+        let got = lookup_symbol("pi").expect("exact entry must win");
+        assert_eq!(got.to_f64(), Some(42.0));
+        // Leave the registry as we found it for other tests.
+        SYMBOL_REGISTRY.write().remove("pi");
+    }
+
+    #[test]
+    fn alias_table_is_sorted_and_has_no_duplicate_aliases() {
+        let table = ascii_aliases();
+        for pair in table.windows(2) {
+            assert!(
+                pair[0].0 < pair[1].0,
+                "alias table must stay sorted and unique: {:?} then {:?}",
+                pair[0].0,
+                pair[1].0
+            );
+        }
+    }
+
+    #[test]
+    fn an_unknown_alias_resolves_to_nothing() {
+        assert!(resolve_alias("definitely_not_a_constant").is_none());
+        assert!(lookup_symbol("definitely_not_a_constant").is_none());
     }
 }

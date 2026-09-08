@@ -1,6 +1,8 @@
 """Core smoke tests for the arithma package."""
 from importlib.metadata import version as _installed_version
 
+import pytest
+
 import arithma
 
 
@@ -53,3 +55,32 @@ def test_variable_is_wave3_class():
     assert arithma.Variable is not None
     v = arithma.Variable("x")
     assert v.name == "x"
+
+
+# ---------------------------------------------------------------------------
+# Surface completeness
+# ---------------------------------------------------------------------------
+
+def test_wrapper_reexports_everything_the_extension_provides():
+    """The wrapper's symbol lists must not lag behind the crate.
+
+    They did: the extension exported 87 symbols while ``__init__`` re-exported
+    42, so the solver, Fourier, numerical and statistics bindings were built
+    into the wheel and unreachable as ``arithma.<name>``. Nothing failed --
+    they were simply absent, which is the hardest kind of gap to notice.
+    """
+    if not arithma._HAS_RUST:  # pragma: no cover - depends on build
+        pytest.skip("requires the built extension")
+    exported = {n for n in dir(arithma._arithma_core) if not n.startswith("_")}
+    listed = set(arithma._CLASSES) | set(arithma._FUNCTIONS) | set(arithma._CONSTANTS)
+    missing = exported - listed
+    assert not missing, f"extension exports these but the wrapper does not list them: {sorted(missing)}"
+    stale = listed - exported
+    assert not stale, f"wrapper lists these but the extension does not export them: {sorted(stale)}"
+
+
+def test_every_listed_symbol_is_actually_importable():
+    if not arithma._HAS_RUST:  # pragma: no cover - depends on build
+        pytest.skip("requires the built extension")
+    for name in arithma.__all__:
+        assert hasattr(arithma, name), f"arithma.{name} is in __all__ but not defined"

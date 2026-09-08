@@ -5,12 +5,34 @@ build-backend = "maturin"
 [project]
 name = "arithma"
 version = "2.0.4"
-description = "Arithma — symbolic mathematics engine (Python bindings)"
+description = "Symbolic mathematics engine: expressions, calculus, linear algebra, units and constants"
+readme = "README.md"
+# 3.9 is the floor abi3 is not used for, so a wheel is built per minor version;
+# the oldest one CI builds for is the honest number here.
 requires-python = ">=3.9"
 authors = [
     { name = "Andrew Keith Watts", email = "AndrewKWatts@gmail.com" },
 ]
 license = { file = "LICENSE" }
+keywords = ["symbolic", "mathematics", "cas", "calculus", "algebra", "units"]
+# PyPI renders these as the sidebar facets people filter on. Without them the
+# project is invisible to every search but its own name.
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/andrewkwatts-maker/Arithma"
+Repository = "https://github.com/andrewkwatts-maker/Arithma"
+Changelog = "https://github.com/andrewkwatts-maker/Arithma/blob/main/CHANGELOG.md"
+Issues = "https://github.com/andrewkwatts-maker/Arithma/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -27,6 +49,6 @@ addopts = "--tb=short"
 
 [tool.maturin]
 manifest-path = "rust/arithma_core/Cargo.toml"
-features = ["python"]
+features = ["extension-module"]
 module-name = "arithma._arithma_core"
 python-source = "python"

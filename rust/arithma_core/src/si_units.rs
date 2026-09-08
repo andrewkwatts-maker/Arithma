@@ -29,8 +29,18 @@ struct SiUnitsDoc {
 struct SiUnitGroups {
     #[serde(default)]
     base_units: Vec<SiUnitDef>,
+    /// The catalogue's own design note. It is deserialised rather than ignored
+    /// so that `si_units_scope_note()` can quote it back to a caller whose
+    /// lookup of a derived unit came back empty.
     #[serde(default)]
-    derived_units: Vec<SiUnitDef>,
+    derived_units_info: Option<DerivedUnitsInfo>,
+}
+
+/// The `derived_units_info` block in `si_units.json`.
+#[derive(Debug, Deserialize)]
+struct DerivedUnitsInfo {
+    #[serde(default)]
+    note: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,12 +58,8 @@ struct SiUnitDef {
 static REGISTRY: Lazy<HashMap<String, ArithmaUnit>> = Lazy::new(|| {
     let mut map = HashMap::new();
     if let Ok(doc) = serde_json::from_str::<SiUnitsDoc>(SI_UNITS_JSON) {
-        for def in doc
-            .si_units
-            .base_units
-            .into_iter()
-            .chain(doc.si_units.derived_units)
-        {
+        // Base units only, by design -- see `si_units_scope_note`.
+        for def in doc.si_units.base_units.into_iter() {
             map.insert(def.symbol.clone(), ArithmaUnit::new(def.symbol, def.name));
         }
     }
@@ -65,8 +71,34 @@ pub struct ArithmaSIUnits;
 
 impl ArithmaSIUnits {
     /// Try to find a unit by SI symbol.
+    ///
+    /// # Scope
+    ///
+    /// The catalogue holds the **seven SI base units only**. Derived units
+    /// (`N`, `J`, `Hz`, `m/s`, ...) return `None` — that is deliberate, not a
+    /// missing-data bug. `si_units.json` states the intent directly:
+    ///
+    /// > Derived units like m/s, kg*m/s^2, etc. should be represented as
+    /// > expressions
+    ///
+    /// The loader previously also read a `derived_units` array that the
+    /// catalogue has never contained. Because the field was
+    /// `#[serde(default)]` the absence was silent, which made a deliberate
+    /// design decision look like a data gap. That field is gone; use
+    /// [`Self::scope_note`] to explain an empty result to a caller.
     pub fn lookup(symbol: &str) -> Option<&'static ArithmaUnit> {
+        debug_assert!(!symbol.is_empty(), "lookup requires a non-empty symbol");
+        debug_assert!(!REGISTRY.is_empty(), "SI registry failed to parse");
         REGISTRY.get(symbol)
+    }
+
+    /// The catalogue's own note on why derived units are absent.
+    ///
+    /// Returns `None` only if the embedded JSON is malformed, which
+    /// `si_units_parse_is_ok` asserts against.
+    pub fn scope_note() -> Option<String> {
+        let doc = serde_json::from_str::<SiUnitsDoc>(SI_UNITS_JSON).ok()?;
+        doc.si_units.derived_units_info?.note
     }
 
     /// Number of registered units.
@@ -124,5 +156,37 @@ mod tests {
             assert_eq!(u.symbol, sym);
             assert_eq!(u.name, name);
         }
+    }
+    #[test]
+    fn catalogue_holds_the_seven_base_units() {
+        assert_eq!(
+            ArithmaSIUnits::len(),
+            7,
+            "the SI catalogue is base units only, by design"
+        );
+        for sym in ["m", "kg", "s", "A", "K", "mol", "cd"] {
+            assert!(
+                ArithmaSIUnits::lookup(sym).is_some(),
+                "base unit {sym} must be present"
+            );
+        }
+    }
+
+    #[test]
+    fn derived_units_are_absent_by_design_and_the_catalogue_says_why() {
+        // Not a data gap: si_units.json declares that derived units are meant
+        // to be expressions. If someone later adds a derived-unit table, this
+        // test should be updated deliberately rather than deleted.
+        for sym in ["N", "J", "Hz", "W", "Pa"] {
+            assert!(
+                ArithmaSIUnits::lookup(sym).is_none(),
+                "{sym} is a derived unit and is out of scope for the catalogue"
+            );
+        }
+        let note = ArithmaSIUnits::scope_note().expect("catalogue must carry its scope note");
+        assert!(
+            note.to_lowercase().contains("derived"),
+            "scope note should explain the derived-unit policy, got {note:?}"
+        );
     }
 }

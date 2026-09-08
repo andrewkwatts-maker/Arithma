@@ -207,10 +207,20 @@ impl ArithmaDistribution for ArithmaNormal {
         let z = (x - self.mean) / self.std_dev;
         Ok((0.5 * erfc(-z / SQRT_2)).clamp(0.0, 1.0))
     }
+    /// The mean.
+    ///
+    /// Validates first. It did not, which meant
+    /// `ArithmaNormal::new(NAN, 0.0).mean()` returned `Ok(NaN)` while `pdf`
+    /// on the very same object returned `Err` -- one accessor reporting a
+    /// broken instance as healthy is worse than either answer alone.
     fn mean(&self) -> Result<f64, String> {
+        self.validate()?;
         Ok(self.mean)
     }
+
+    /// The variance. Validates first, for the reason given on `mean`.
     fn variance(&self) -> Result<f64, String> {
+        self.validate()?;
         Ok(self.std_dev * self.std_dev)
     }
 }
@@ -379,5 +389,40 @@ mod tests {
 
         assert!(ArithmaNormal::standard().pdf(f64::NAN).is_err());
         assert!(ArithmaNormal::standard().cdf(f64::NAN).is_err());
+    }
+    // ─── regressions ───────────────────────────────────────────────────────
+
+    #[test]
+    fn mean_and_variance_refuse_an_invalid_distribution() {
+        // `ArithmaNormal::new(NAN, 0.0).mean()` returned `Ok(NaN)` while `pdf`
+        // on the same object returned `Err`. One accessor calling a broken
+        // instance healthy is worse than either answer alone.
+        let bad = ArithmaNormal::new(f64::NAN, 0.0);
+        assert!(bad.pdf(0.0).is_err(), "pdf already rejected this");
+        assert!(bad.mean().is_err(), "mean must reject it too");
+        assert!(bad.variance().is_err(), "variance must reject it too");
+
+        let zero_sigma = ArithmaNormal::new(0.0, 0.0);
+        assert!(zero_sigma.variance().is_err(), "a zero std_dev is invalid");
+
+        let good = ArithmaNormal::new(2.0, 3.0);
+        assert_eq!(good.mean().expect("valid"), 2.0);
+        assert_eq!(good.variance().expect("valid"), 9.0);
+    }
+
+    #[test]
+    fn log_gamma_matches_known_values() {
+        use crate::probabilities::ln_gamma;
+        // Gamma(n) = (n-1)!, so ln Gamma(5) = ln 24.
+        assert!((ln_gamma(5.0) - 24.0_f64.ln()).abs() < 1e-12);
+        assert!((ln_gamma(1.0) - 0.0).abs() < 1e-12);
+        assert!((ln_gamma(2.0) - 0.0).abs() < 1e-12);
+        // Gamma(1/2) = sqrt(pi).
+        let expected = core::f64::consts::PI.sqrt().ln();
+        assert!((ln_gamma(0.5) - expected).abs() < 1e-12);
+        // Poles and out-of-domain inputs are NaN, matching libm's lgamma.
+        assert!(ln_gamma(0.0).is_nan());
+        assert!(ln_gamma(-1.0).is_nan());
+        assert!(ln_gamma(f64::NAN).is_nan());
     }
 }

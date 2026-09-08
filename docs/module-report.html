@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arithma · PlayTow module</title>
+<style>
+:root {
+  --paper: #f6f5f2;
+  --card: #ffffff;
+  --ink: #16181d;
+  --ink-soft: #5b6068;
+  --ink-faint: #8a9099;
+  --rule: #e2e0da;
+  --rule-soft: #eeece7;
+  --accent: #b0632f;
+  --accent-soft: #f0e2d6;
+  --owns: #b0632f;
+  --owns-bg: #f7ece3;
+  --nots: #5a6472;
+  --nots-bg: #eceef1;
+  --done: #3f7d51;
+  --done-bg: #e4efe6;
+  --active: #9a7213;
+  --active-bg: #f6efd9;
+  --wait: #7c8189;
+  --wait-bg: #eceded;
+  --alert: #a13b36;
+  --alert-bg: #f6e5e3;
+  --shadow: 0 1px 2px rgba(20,24,29,.05), 0 4px 14px rgba(20,24,29,.05);
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #101318;
+    --card: #171b21;
+    --ink: #e8e6e1;
+    --ink-soft: #a0a6ae;
+    --ink-faint: #6e757e;
+    --rule: #262b33;
+    --rule-soft: #1e232a;
+    --accent: #d98a52;
+    --accent-soft: #33241a;
+    --owns: #d98a52;
+    --owns-bg: #2a1e15;
+    --nots: #94a0b0;
+    --nots-bg: #1d222a;
+    --done: #6fb583;
+    --done-bg: #17281c;
+    --active: #d4ac47;
+    --active-bg: #2a2413;
+    --wait: #868d96;
+    --wait-bg: #1d2128;
+    --alert: #e2827b;
+    --alert-bg: #2b1a19;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #101318;
+  --card: #171b21;
+  --ink: #e8e6e1;
+  --ink-soft: #a0a6ae;
+  --ink-faint: #6e757e;
+  --rule: #262b33;
+  --rule-soft: #1e232a;
+  --accent: #d98a52;
+  --accent-soft: #33241a;
+  --owns: #d98a52;
+  --owns-bg: #2a1e15;
+  --nots: #94a0b0;
+  --nots-bg: #1d222a;
+  --done: #6fb583;
+  --done-bg: #17281c;
+  --active: #d4ac47;
+  --active-bg: #2a2413;
+  --wait: #868d96;
+  --wait-bg: #1d2128;
+  --alert: #e2827b;
+  --alert-bg: #2b1a19;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+
+header.top { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 2.5rem; }
+.eyebrow {
+  font-family: var(--mono); font-size: .7rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--accent);
+}
+h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -.02em; }
+.lede { color: var(--ink-soft); max-width: 62ch; margin: 0; }
+
+.totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px;
+  background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; margin-bottom: 3rem; }
+.tot { background: var(--card); padding: 1rem 1.1rem; }
+.tot .n { font-family: var(--mono); font-size: 1.55rem; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.tot .k { font-size: .72rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .08em; margin-top: .15rem; }
+
+/* The spine. Extraction order is dependency-forced, so the number is
+   information: it is the order these can be done in, not decoration. */
+.spine { display: flex; flex-direction: column; gap: 1rem; }
+.row { display: grid; grid-template-columns: 3rem 1fr; gap: 1rem; align-items: start; }
+.ord {
+  font-family: var(--mono); font-size: .95rem; font-variant-numeric: tabular-nums;
+  color: var(--ink-faint); text-align: right; padding-top: 1.15rem;
+}
+.card {
+  background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+  box-shadow: var(--shadow); overflow: hidden; border-left: 3px solid var(--wait);
+}
+.card.is-done { border-left-color: var(--done); }
+.card.is-active { border-left-color: var(--active); }
+.card.is-alert { border-left-color: var(--alert); }
+
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; padding: 1rem 1.2rem .6rem; }
+.crate { font-family: var(--mono); font-weight: 600; font-size: 1.05rem; letter-spacing: -.01em; }
+.pill {
+  font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase;
+  padding: .18rem .5rem; border-radius: 100px; background: var(--wait-bg); color: var(--wait);
+}
+.pill.done { background: var(--done-bg); color: var(--done); }
+.pill.active { background: var(--active-bg); color: var(--active); }
+.pill.alert { background: var(--alert-bg); color: var(--alert); }
+.metrics { margin-left: auto; display: flex; gap: 1rem; font-family: var(--mono); font-size: .78rem;
+  font-variant-numeric: tabular-nums; color: var(--ink-faint); }
+.metrics b { color: var(--ink); font-weight: 600; }
+
+.purpose { padding: 0 1.2rem .9rem; color: var(--ink-soft); max-width: 72ch; margin: 0; }
+
+/* The boundary. Two columns, deliberately different weights -- the right-hand
+   list is the acceptance criterion, not an afterthought. */
+.bounds { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--rule-soft);
+  border-top: 1px solid var(--rule-soft); }
+.b { background: var(--card); padding: .85rem 1.2rem 1rem; }
+.b h4 { margin: 0 0 .45rem; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em;
+  text-transform: uppercase; font-weight: 600; }
+.b.owns h4 { color: var(--owns); }
+.b.nots h4 { color: var(--nots); }
+.b ul { margin: 0; padding-left: 1.05rem; }
+.b li { margin-bottom: .25rem; font-size: .85rem; }
+.b.owns li::marker { color: var(--owns); }
+.b.nots li { color: var(--ink-soft); }
+.b.nots li::marker { color: var(--nots); }
+
+.issues { border-top: 1px solid var(--rule-soft); padding: .85rem 1.2rem 1rem; }
+.issues h4 { margin: 0 0 .45rem; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--alert); font-weight: 600; }
+.issues ul { margin: 0; padding-left: 1.05rem; }
+.issues li { font-size: .84rem; color: var(--ink-soft); margin-bottom: .3rem; }
+.issues li::marker { color: var(--alert); }
+.notes { padding: .55rem 1.2rem .8rem; font-family: var(--mono); font-size: .75rem; color: var(--alert);
+  border-top: 1px solid var(--rule-soft); }
+
+.caps { margin-top: 3rem; }
+h2 { font-size: 1.3rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
+.sub { color: var(--ink-soft); margin: 0 0 1.1rem; max-width: 68ch; }
+.captable { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.captable th { text-align: left; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-faint); font-weight: 600; padding: .4rem .6rem; border-bottom: 1px solid var(--rule); }
+.captable td { padding: .35rem .6rem; border-bottom: 1px solid var(--rule-soft); font-family: var(--mono); }
+.captable td.owner { color: var(--accent); }
+.scroll { overflow-x: auto; }
+
+footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--rule);
+  color: var(--ink-faint); font-size: .8rem; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+@media (max-width: 720px) {
+  .bounds { grid-template-columns: 1fr; }
+  .row { grid-template-columns: 2rem 1fr; gap: .6rem; }
+  .metrics { width: 100%; margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">PlayTow module</span>
+  <h1>Arithma</h1>
+  <p class="lede">The symbolic and exact-arithmetic engine. Already extracted, tested and publish-ready; it is listed here because it is the module every parametric thing depends on, not because it needs work.</p>
+</header>
+<div class="spine">
+<div class="row">
+  <div class="ord">0</div>
+  <article class="card is-done">
+    <div class="head">
+      <span class="crate">arithma_core</span>
+      <span class="pill done">live</span>
+      <span class="pill">1 capabilities</span>
+      <span class="metrics"><span><b>28,145</b> rust</span><span><b>1,106</b> py</span><span><b>659</b> tests</span></span>
+    </div>
+    <p class="purpose">The symbolic and exact-arithmetic engine. Already extracted, tested and publish-ready; it is listed here because it is the module every parametric thing depends on, not because it needs work.</p>
+    <div class="bounds">
+      <div class="b owns"><h4>Owns</h4><ul><li>Expression AST, simplification, calculus, equation solving</li><li>Exact integer and rational arithmetic</li><li>Matrices, tensors, units and SI, constants</li><li>Fourier, probability distributions, numerical methods</li></ul></div>
+      <div class="b nots"><h4>Does not own</h4><ul><li>Geometry evaluation in a hot path — it builds expression trees, it does not compute f32 (Topos and Stereoma do that)</li><li>Anything GPU</li></ul></div>
+    </div>
+    <div class="issues"><h4>Open · 2</h4><ul><li>DO NOT merge the 45k LOC that pt-arithmos holds and arithma_core does not. The repo is authoritative and publish-ready; the only requirement is that PT can import arithma_core.</li><li>Licence contradiction, owner decision: LICENSE and both manifests say MIT while 62 source files say All Rights Reserved. Blocks publication.</li></ul></div>
+    
+  </article>
+</div></div>
+<footer>Generated 2026-09-08 09:28 UTC. Intent from
+<code>GitReview/extraction/modules.yaml</code>; measurements scanned. Do not edit by hand.</footer></div>
+</body>
+</html>

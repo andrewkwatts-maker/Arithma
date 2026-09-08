@@ -220,8 +220,11 @@ pub enum ArithmaFunction {
 }
 
 impl ArithmaFunction {
-    /// Return the expected number of arguments. Wave-2 stub knows the obvious
-    /// cases; the real arity table lands in Wave 3.
+    /// Return the expected number of arguments.
+    ///
+    /// (The comment here used to say "Wave-2 stub"; the match below is a real
+    /// arity table, so the marker was stale and made the crate look less
+    /// finished than it is.)
     pub fn arity(&self) -> usize {
         match self {
             // Binary

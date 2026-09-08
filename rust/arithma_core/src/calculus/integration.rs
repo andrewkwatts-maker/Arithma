@@ -113,6 +113,17 @@ fn integrate_function(
             power_rule(&x(), n.to_f64())
         }
 
+        // `Power` is the *binary* form, `base ^ exponent`, and it is what an
+        // expression built from Python's `**` or from `Expression::pow`
+        // actually carries -- `Pow(n)` above is the unary form with a literal
+        // exponent folded into the variant.
+        //
+        // Only the unary form had a rule. So `differentiate(x**2)` worked and
+        // `integrate(x**2)` returned "no integration rule for `Power`" -- the
+        // first thing anyone tries on a symbolic maths library, failing on an
+        // asymmetry in the representation rather than in the mathematics.
+        ArithmaFunction::Power if args.len() == 2 => integrate_power(&args[0], &args[1], var),
+
         // Table entries. Each requires its argument to be exactly `var` —
         // a composed argument would need the chain rule in reverse.
         ArithmaFunction::Exp if args.len() == 1 && is_var(&args[0], var) => {
@@ -137,6 +148,84 @@ fn integrate_function(
 
         other => Err(format!("no integration rule for `{other:?}`")),
     }
+}
+
+/// The value of a subtree that names no variables, if it has one.
+///
+/// Used to decide whether an exponent is a constant. Non-finite results are
+/// rejected: an exponent of infinity is not a case the power rule covers, and
+/// returning `Some(inf)` would send it there.
+fn constant_value(expr: &ArithmaExpression) -> Option<f64> {
+    let empty: ArithmaBindings = HashMap::new();
+    expr.evaluate(&empty).ok().filter(|v| v.is_finite())
+}
+
+/// `∫ base^exponent d{var}` for the two shapes with a safe closed form.
+///
+/// `x^n` with a constant `n` is the power rule, including `n = -1` as `ln|x|`.
+/// `a^x` with a constant `a` is `a^x / ln a`.
+///
+/// A **symbolic** exponent is refused rather than answered. The general form
+/// `x^n -> x^(n+1)/(n+1)` is wrong at exactly `n = -1`, and with `n` unknown
+/// there is no way to tell -- so emitting it would be an answer that is
+/// silently wrong for one input, which is the thing this module says in its own
+/// header it would rather not do.
+fn integrate_power(
+    base: &ArithmaExpression,
+    exponent: &ArithmaExpression,
+    var: &str,
+) -> Result<ArithmaExpression, String> {
+    let base_has = mentions(base, var);
+    let exp_has = mentions(exponent, var);
+    debug_assert!(
+        base_has || exp_has,
+        "integrate returns early for a subtree free of the variable"
+    );
+
+    if base_has && exp_has {
+        return Err(format!(
+            "both the base and the exponent depend on `{var}`; that needs              logarithmic differentiation, which is not implemented"
+        ));
+    }
+
+    if base_has {
+        if !is_var(base, var) {
+            return Err(format!(
+                "the base depends on `{var}` but is not `{var}` itself; that                  needs substitution, which is not implemented"
+            ));
+        }
+        let Some(n) = constant_value(exponent) else {
+            return Err(
+                "the power rule needs a numeric exponent: `x^n` integrates to                  `x^(n+1)/(n+1)` except at n = -1, where it is `ln|x|`, and a                  symbolic exponent cannot be ruled out"
+                    .to_string(),
+            );
+        };
+        return power_rule(&ArithmaExpression::var(var), n);
+    }
+
+    // `a^x`. Only for a genuinely numeric base: `ln a` is the divisor, so a
+    // base of 1 divides by zero and a base of 0 or less has no real logarithm.
+    if !is_var(exponent, var) {
+        return Err(format!(
+            "the exponent depends on `{var}` but is not `{var}` itself; that              needs substitution, which is not implemented"
+        ));
+    }
+    let Some(a) = constant_value(base) else {
+        return Err("`a^x` integrates to `a^x / ln a`, which needs a numeric base".to_string());
+    };
+    if a <= 0.0 || (a - 1.0).abs() < f64::EPSILON {
+        return Err(format!(
+            "`{a}^x` has no antiderivative of the form `a^x / ln a`: the base              must be positive and not 1"
+        ));
+    }
+    debug_assert!(
+        a.ln().is_finite() && a.ln() != 0.0,
+        "ln a is a usable divisor"
+    );
+    Ok(ArithmaExpression::div(
+        ArithmaExpression::pow(base.clone(), ArithmaExpression::var(var)),
+        ArithmaExpression::from_f64(a.ln()),
+    ))
 }
 
 /// `∫xⁿ dx = xⁿ⁺¹/(n+1)`, with the `n = -1` case handled as `ln|x|`.
@@ -461,5 +550,104 @@ mod tests {
         // total would be the dangerous outcome.
         let e = ArithmaExpression::div(n(1), x());
         assert!(integrate_numeric(&e, "x", -1.0, 1.0).is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // The binary `Power` form
+    // -----------------------------------------------------------------------
+
+    /// `x**2` from Python builds `Function(Power, [x, 2])`, not `Pow(2)`.
+    /// Only the latter had a rule, so the most basic integral in the library
+    /// failed while its derivative worked.
+    #[test]
+    fn the_binary_power_form_integrates_like_the_unary_one() {
+        let x = ArithmaExpression::var("x");
+        for n in [0.0_f64, 1.0, 2.0, 3.0, 7.0, -2.0, 0.5] {
+            let binary = ArithmaExpression::pow(x.clone(), ArithmaExpression::from_f64(n));
+            let got = integrate(&binary, "x").unwrap_or_else(|e| panic!("x^{n}: {e}"));
+            // Check by differentiating back: d/dx of the antiderivative must
+            // agree with the integrand at a sample point. That is a stronger
+            // claim than matching a written-out expected form, and it does not
+            // depend on how the result happens to be spelled.
+            let f = |e: &ArithmaExpression, at: f64| {
+                let mut bb: ArithmaBindings = HashMap::new();
+                bb.insert("x".to_string(), at);
+                e.evaluate(&bb).unwrap()
+            };
+            let h = 1e-6;
+            let slope = (f(&got, 1.7 + h) - f(&got, 1.7 - h)) / (2.0 * h);
+            let expected = f(&binary, 1.7);
+            assert!(
+                (slope - expected).abs() < 1e-4,
+                "x^{n}: d/dx of the antiderivative is {slope}, integrand is {expected}"
+            );
+        }
+    }
+
+    /// The one exponent the power rule does not cover, and the reason it needs
+    /// a numeric exponent at all.
+    #[test]
+    fn the_reciprocal_is_a_logarithm_not_a_division_by_zero() {
+        let x = ArithmaExpression::var("x");
+        let recip = ArithmaExpression::pow(x, ArithmaExpression::from_i64(-1));
+        let got = integrate(&recip, "x").unwrap();
+        let mut b: ArithmaBindings = HashMap::new();
+        b.insert("x".to_string(), 2.0);
+        assert!(
+            (got.evaluate(&b).unwrap() - 2.0_f64.ln()).abs() < 1e-12,
+            "expected ln 2, got {got:?}"
+        );
+    }
+
+    #[test]
+    fn a_symbolic_exponent_is_refused_rather_than_guessed() {
+        // `x^n -> x^(n+1)/(n+1)` is wrong at exactly n = -1. With `n` unknown
+        // there is no way to tell, and a silently wrong antiderivative is
+        // worse than no antiderivative.
+        let e = ArithmaExpression::pow(ArithmaExpression::var("x"), ArithmaExpression::var("n"));
+        let err = integrate(&e, "x").unwrap_err();
+        assert!(err.contains("numeric exponent"), "{err}");
+    }
+
+    #[test]
+    fn a_constant_raised_to_the_variable_is_the_standard_table_entry() {
+        // d/dx (2^x / ln 2) = 2^x.
+        let e = ArithmaExpression::pow(ArithmaExpression::from_i64(2), ArithmaExpression::var("x"));
+        let got = integrate(&e, "x").unwrap();
+        let at = |v: f64| {
+            let mut b: ArithmaBindings = HashMap::new();
+            b.insert("x".to_string(), v);
+            got.evaluate(&b).unwrap()
+        };
+        let h = 1e-6;
+        let slope = (at(1.5 + h) - at(1.5 - h)) / (2.0 * h);
+        assert!((slope - 2.0_f64.powf(1.5)).abs() < 1e-4, "slope {slope}");
+    }
+
+    #[test]
+    fn bases_with_no_real_logarithm_are_refused() {
+        // `a^x / ln a` divides by zero at a = 1 and has no real value at a <= 0.
+        for a in [1_i64, 0, -3] {
+            let e =
+                ArithmaExpression::pow(ArithmaExpression::from_i64(a), ArithmaExpression::var("x"));
+            assert!(
+                integrate(&e, "x").is_err(),
+                "{a}^x must not produce an antiderivative"
+            );
+        }
+    }
+
+    #[test]
+    fn a_power_needing_substitution_says_so_rather_than_answering() {
+        let x = ArithmaExpression::var("x");
+        // (x + 1)^2 -- correct answer needs substitution, which is not here.
+        let inner = ArithmaExpression::add(x.clone(), ArithmaExpression::from_i64(1));
+        let e = ArithmaExpression::pow(inner, ArithmaExpression::from_i64(2));
+        let err = integrate(&e, "x").unwrap_err();
+        assert!(err.contains("substitution"), "{err}");
+        // x^x -- both sides depend on x.
+        let both = ArithmaExpression::pow(x.clone(), x);
+        let err = integrate(&both, "x").unwrap_err();
+        assert!(err.contains("logarithmic differentiation"), "{err}");
     }
 }

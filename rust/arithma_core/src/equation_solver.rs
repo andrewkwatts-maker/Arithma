@@ -10,9 +10,21 @@
 //! # Equation solver
 //!
 //! Symbolic and numeric equation solving. Mirrors
-//! `pt_arithmos::pt_equation_solver`. Wave 2 ships type signatures only; Wave 3
-//! ports the real solver passes (linear, quadratic, polynomial root,
-//! transcendental, system-of-equations).
+//! `pt_arithmos::pt_equation_solver`.
+//!
+//! The header used to say "Wave 2 ships type signatures only". That has not
+//! been true for some time -- the passes below are real:
+//!
+//! - [`solve`] runs a closed-form pass (polynomial fit with a verification
+//!   sample, numerically stable quadratic pairing), falling back to a
+//!   sign-change bisection scan.
+//! - [`solve_equation`] rewrites `lhs = rhs` to `lhs - rhs = 0` and defers.
+//! - [`solve_system`] recovers coefficients and runs Gaussian elimination with
+//!   partial pivoting, rejecting non-linear and singular systems.
+//!
+//! Known limit: [`solve_system`] accepts a strategy argument and ignores it,
+//! because only the linear path exists. Callers are validated anyway, so a
+//! misspelled strategy is still an error rather than a silent no-op.
 
 use std::collections::HashMap;
 

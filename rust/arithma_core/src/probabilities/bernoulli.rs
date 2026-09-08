@@ -74,9 +74,11 @@ impl ArithmaDistribution for ArithmaBernoulli {
         }
     }
     fn mean(&self) -> Result<f64, String> {
+        self.validate()?;
         Ok(self.p)
     }
     fn variance(&self) -> Result<f64, String> {
+        self.validate()?;
         Ok(self.p * (1.0 - self.p))
     }
 }
@@ -146,5 +148,19 @@ mod tests {
         assert!(ArithmaBernoulli::new(-0.1).cdf(0.0).is_err());
         assert!(ArithmaBernoulli::new(f64::NAN).pdf(0.0).is_err());
         assert!(ArithmaBernoulli::new(0.5).pdf(f64::NAN).is_err());
+    }
+    // ─── regressions ───────────────────────────────────────────────────────
+
+    #[test]
+    fn mean_and_variance_refuse_an_invalid_distribution() {
+        let bad = ArithmaBernoulli::new(1.5);
+        assert!(bad.pdf(1.0).is_err());
+        assert!(
+            bad.mean().is_err(),
+            "p outside [0, 1] must not yield a mean"
+        );
+        assert!(bad.variance().is_err());
+        let good = ArithmaBernoulli::new(0.25);
+        assert_eq!(good.mean().expect("valid"), 0.25);
     }
 }

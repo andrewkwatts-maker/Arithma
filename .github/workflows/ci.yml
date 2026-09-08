@@ -27,8 +27,33 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
 
+      # The `python` feature was never linted or built here. That is exactly
+      # where 30 warnings had accumulated in pyfacade -- invisible to CI
+      # because no job turned the feature on. Lint it explicitly.
+      - name: Clippy (python feature)
+        run: cargo clippy --features python --all-targets -- -D warnings
+
+      # `cargo test` builds default features only, so a feature-gated module
+      # can break without any test failing. `check` compiles every combination
+      # cheaply.
+      - name: Check all feature combinations compile
+        run: |
+          cargo check --features python
+          cargo check --features rust-support
+          cargo check --features cpp-support
+          cargo check --all-features
+
       - name: Test (default features)
         run: cargo test --verbose
+
+      # The `python` feature used to imply pyo3'''s `extension-module`, which
+      # deliberately does not link libpython -- so a test binary built with it
+      # could not load, and this step could not exist. Every `#[cfg(test)]`
+      # test inside `pyfacade/` was therefore written and never executed.
+      # `extension-module` is now a separate feature that only the wheel build
+      # turns on, so these finally run.
+      - name: Test (python feature)
+        run: cargo test --features python --verbose
 
       # Both are advertised in Cargo.toml and both were broken — their module
       # files did not exist. Build them so that cannot regress unnoticed.

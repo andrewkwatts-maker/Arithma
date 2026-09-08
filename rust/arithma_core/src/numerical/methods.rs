@@ -180,7 +180,29 @@ fn bisect(sampler: &mut Sampler<'_>, mut lo: f64, mut hi: f64) -> Result<f64, St
             f_lo = f_mid;
         }
     }
-    Ok(0.5 * (lo + hi))
+    // The doc-comment on `solve_with_method` promises an error when the cap is
+    // reached without the residual falling under tolerance; this returned the
+    // midpoint unconditionally, so an unconverged answer was indistinguishable
+    // from a converged one. Check the residual and report honestly.
+    let mid = 0.5 * (lo + hi);
+    converged_or_err(sampler, mid, "bisection")
+}
+
+/// Accept `x` if the residual is within tolerance, otherwise report the cap.
+///
+/// Shared by the two bracketing methods so they cannot drift apart on what
+/// "converged" means.
+fn converged_or_err(sampler: &mut Sampler<'_>, x: f64, method: &str) -> Result<f64, String> {
+    debug_assert!(!method.is_empty(), "method name is used in the message");
+    let residual = sampler.f(x)?;
+    debug_assert!(!residual.is_nan(), "sampler returned NaN as a value");
+    if residual.abs() <= ARITHMA_SOLVE_RESIDUAL_TOL {
+        return Ok(x);
+    }
+    Err(format!(
+        "solve_with_method: {method} did not converge in \
+         {ARITHMA_SOLVE_MAX_ITERATIONS} iterations (residual {residual:e})"
+    ))
 }
 
 /// Brent's method (van Wijngaarden–Dekker–Brent): inverse quadratic
@@ -252,7 +274,8 @@ fn brent(sampler: &mut Sampler<'_>, lo: f64, hi: f64) -> Result<f64, String> {
             std::mem::swap(&mut fa, &mut fb);
         }
     }
-    Ok(b)
+    // Same reasoning as `bisect`: the cap must not look like convergence.
+    converged_or_err(sampler, b, "Brent")
 }
 
 /// Solve `expr = 0` for `var` using the specified method.

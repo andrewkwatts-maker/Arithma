@@ -12,7 +12,7 @@
 //! `Binomial(n, p)` — number of successes in `n` independent trials each with
 //! success probability `p`.
 
-use crate::probabilities::ArithmaDistribution;
+use crate::probabilities::{ln_gamma, ArithmaDistribution};
 
 /// Upper bound on the number of PMF terms [`ArithmaBinomial::cdf`] will sum.
 ///
@@ -42,12 +42,38 @@ pub fn binomial_coefficient(n: u64, k: u64) -> f64 {
         return 0.0;
     }
     let k = k.min(n - k);
+    // The loop ran `min(k, n-k)` times over `u64` arguments, so
+    // `C(u64::MAX, u64::MAX/2)` would spin for ~9e18 iterations. The cap is
+    // not a compromise: whenever `min(k, n-k) > 1024` the true value is
+    // already past `f64::MAX`, so infinity is the correct answer.
+    //
+    // Proof: with `m = min(k, n-k)` we have `n >= 2m`, and
+    // `C(n, m) >= (n/m)^m >= 2^m`. At `m = 1025` that is `2^1025`, and
+    // `f64::MAX` is just under `2^1024`.
+    if k > MAX_EXACT_BINOMIAL_TERMS {
+        return f64::INFINITY;
+    }
+    debug_assert!(k <= MAX_EXACT_BINOMIAL_TERMS, "term cap not enforced");
     let mut result = 1.0_f64;
     for i in 1..=k {
         result = result * ((n - k + i) as f64) / (i as f64);
     }
+    debug_assert!(!result.is_nan(), "coefficient came out NaN");
     result
 }
+
+/// Largest `min(k, n-k)` for which [`binomial_coefficient`] iterates.
+///
+/// Beyond this the exact value exceeds `f64::MAX`, so the function returns
+/// infinity without looping. See the proof in its body.
+pub const MAX_EXACT_BINOMIAL_TERMS: u64 = 1024;
+
+/// Largest `min(k, n-k)` for which [`ln_binomial_coefficient`] sums terms
+/// directly before switching to the log-gamma closed form.
+///
+/// Term summation is the more accurate of the two, so it is preferred while
+/// it is cheap; the cap only exists so the loop is bounded.
+const MAX_LN_BINOMIAL_TERMS: u64 = 4096;
 
 /// `ln C(n, k)`, accumulated term by term.
 ///
@@ -56,6 +82,19 @@ pub fn binomial_coefficient(n: u64, k: u64) -> f64 {
 /// `n` instead of returning `NaN` from `inf * 0.0`.
 fn ln_binomial_coefficient(n: u64, k: u64) -> f64 {
     let k = k.min(n - k);
+    // Term summation is more accurate, but it is `min(k, n-k)` iterations --
+    // unbounded over `u64` arguments. Past the cap, fall back to the log-gamma
+    // identity, which is O(1):
+    //
+    //     ln C(n, k) = lnGamma(n+1) - lnGamma(k+1) - lnGamma(n-k+1)
+    if k > MAX_LN_BINOMIAL_TERMS {
+        let out = ln_gamma((n as f64) + 1.0)
+            - ln_gamma((k as f64) + 1.0)
+            - ln_gamma(((n - k) as f64) + 1.0);
+        debug_assert!(!out.is_nan(), "log-gamma path produced NaN");
+        return out;
+    }
+    debug_assert!(k <= MAX_LN_BINOMIAL_TERMS, "term cap not enforced");
     let mut acc = 0.0_f64;
     for i in 1..=k {
         acc += ((n - k + i) as f64).ln() - (i as f64).ln();
@@ -172,9 +211,11 @@ impl ArithmaDistribution for ArithmaBinomial {
         Ok(acc.clamp(0.0, 1.0))
     }
     fn mean(&self) -> Result<f64, String> {
+        self.validate()?;
         Ok((self.n as f64) * self.p)
     }
     fn variance(&self) -> Result<f64, String> {
+        self.validate()?;
         Ok((self.n as f64) * self.p * (1.0 - self.p))
     }
 }
@@ -307,5 +348,78 @@ mod tests {
         assert!(ArithmaBinomial::new(5, 0.5).pdf(f64::NAN).is_err());
         // Summation limit.
         assert!(ArithmaBinomial::new(2_000_000, 0.5).cdf(10.0).is_err());
+    }
+    // ─── regressions ───────────────────────────────────────────────────────
+
+    #[test]
+    fn binomial_coefficient_terminates_on_adversarial_input() {
+        // This used to loop `min(k, n-k)` times -- about 9e18 iterations, so
+        // the call never returned. It must now answer immediately.
+        let huge = binomial_coefficient(u64::MAX, u64::MAX / 2);
+        assert!(
+            huge.is_infinite(),
+            "C(u64::MAX, u64::MAX/2) is far past f64::MAX, so infinity is correct"
+        );
+        assert!(binomial_coefficient(u64::MAX, 0).is_finite());
+    }
+
+    #[test]
+    fn the_term_cap_sits_exactly_where_the_value_leaves_f64() {
+        // The cap is a mathematical boundary, not a guess: with
+        // m = min(k, n-k) and n >= 2m, C(n, m) >= 2^m, and f64::MAX < 2^1024.
+        // So every refused case genuinely is infinite, and the last accepted
+        // case is genuinely computed.
+        let at_cap = binomial_coefficient(2 * MAX_EXACT_BINOMIAL_TERMS, MAX_EXACT_BINOMIAL_TERMS);
+        assert!(at_cap.is_infinite(), "C(2048, 1024) overflows f64 honestly");
+        // A case just inside the cap that is genuinely finite still computes.
+        assert_eq!(binomial_coefficient(1024, 1), 1024.0);
+        assert_eq!(binomial_coefficient(50, 25), 126410606437752.0);
+    }
+
+    #[test]
+    fn small_coefficients_are_still_exact() {
+        assert_eq!(binomial_coefficient(5, 2), 10.0);
+        assert_eq!(binomial_coefficient(10, 5), 252.0);
+        assert_eq!(binomial_coefficient(0, 0), 1.0);
+        assert_eq!(binomial_coefficient(3, 4), 0.0, "k > n has no combinations");
+    }
+
+    #[test]
+    fn the_log_gamma_fallback_agrees_with_term_summation() {
+        // Both paths must give the same answer where they overlap, or the
+        // pmf would jump discontinuously as n crosses the cap.
+        for (n, k) in [(20_000_u64, 5_000_u64), (100_000, 9_000)] {
+            let by_terms = {
+                let m = k.min(n - k);
+                let mut acc = 0.0_f64;
+                for i in 1..=m {
+                    acc += ((n - m + i) as f64).ln() - (i as f64).ln();
+                }
+                acc
+            };
+            let by_gamma = ln_gamma((n as f64) + 1.0)
+                - ln_gamma((k as f64) + 1.0)
+                - ln_gamma(((n - k) as f64) + 1.0);
+            let rel = (by_terms - by_gamma).abs() / by_terms.abs();
+            assert!(
+                rel < 1e-12,
+                "ln C({n}, {k}): terms {by_terms} vs gamma {by_gamma}, rel {rel:e}"
+            );
+        }
+    }
+
+    #[test]
+    fn mean_and_variance_refuse_an_invalid_distribution() {
+        // These returned Ok on a distribution whose pdf errors.
+        let bad = ArithmaBinomial::new(10, f64::NAN);
+        assert!(bad.pdf(1.0).is_err());
+        assert!(
+            bad.mean().is_err(),
+            "mean must not report a broken distribution as healthy"
+        );
+        assert!(bad.variance().is_err());
+        let good = ArithmaBinomial::new(10, 0.5);
+        assert_eq!(good.mean().expect("valid"), 5.0);
+        assert_eq!(good.variance().expect("valid"), 2.5);
     }
 }

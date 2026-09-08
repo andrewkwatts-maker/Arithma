@@ -474,12 +474,18 @@ impl ArithmaCriticalPoints {
             }
         };
 
-        let mut prev_x = range.lo;
-        let mut prev_y = eval_at(f, var, prev_x)?;
+        // `prev` holds a matched (x, f(x)) pair, or `None` when the previous
+        // sample could not be evaluated. It used to be two independent
+        // variables, and the pole path below updated only `prev_x` -- leaving
+        // `prev_y` from *before* the gap. The next successful sample was then
+        // compared against a value from across a discontinuity, which
+        // manufactures a sign change and a bracket that spans a pole.
+        let first_y = eval_at(f, var, range.lo)?;
+        let mut prev: Option<(f64, f64)> = Some((range.lo, first_y));
         samples += 1;
-        if prev_y.abs() <= self.config.convergence_threshold {
+        if first_y.abs() <= self.config.convergence_threshold {
             zero_samples += 1;
-            push_unique(&mut roots, prev_x);
+            push_unique(&mut roots, range.lo);
         }
 
         for i in 1..=steps {
@@ -491,9 +497,11 @@ impl ArithmaCriticalPoints {
             let y = match eval_at(f, var, x) {
                 Ok(v) => v,
                 // A pole or domain gap inside the range is not fatal — skip the
-                // sample and continue scanning the rest of the interval.
+                // sample and continue scanning the rest of the interval. The
+                // pair is dropped rather than half-updated, so no bracket is
+                // ever formed across the gap.
                 Err(_) => {
-                    prev_x = x;
+                    prev = None;
                     continue;
                 }
             };
@@ -502,13 +510,15 @@ impl ArithmaCriticalPoints {
             if y.abs() <= self.config.convergence_threshold {
                 zero_samples += 1;
                 push_unique(&mut roots, x);
-            } else if prev_y * y < 0.0 {
-                if let Ok(r) = find_root_bisection(f, var, prev_x, x, &cfg) {
-                    push_unique(&mut roots, r.root);
+            } else if let Some((px, py)) = prev {
+                debug_assert!(px < x || px.is_nan(), "scan must advance");
+                if py * y < 0.0 {
+                    if let Ok(r) = find_root_bisection(f, var, px, x, &cfg) {
+                        push_unique(&mut roots, r.root);
+                    }
                 }
             }
-            prev_x = x;
-            prev_y = y;
+            prev = Some((x, y));
         }
 
         // `f` vanishing at *every* sample means it is identically zero on the
@@ -900,5 +910,52 @@ mod tests {
             .find_stationary_points(&parabola(), "x", ArithmaSearchRange::new(-1.0, 1.0))
             .unwrap();
         assert_eq!(pts.len(), 1);
+    }
+    // ─── regressions ───────────────────────────────────────────────────────
+
+    #[test]
+    fn a_domain_gap_never_manufactures_a_critical_point() {
+        // `1/x` has no stationary point anywhere, and x = 0 is not in its
+        // domain. The scan used to advance `prev_x` past an unevaluable sample
+        // while keeping the *pre-gap* `prev_y`, so the pair straddled the
+        // discontinuity and could bracket a "root" that is really a pole.
+        let f = ArithmaExpression::div(ArithmaExpression::from_i64(1), ArithmaExpression::var("x"));
+        let finder = ArithmaCriticalPoints::new();
+        let pts = finder
+            .find_stationary_points(&f, "x", ArithmaSearchRange::new(-1.0, 1.0))
+            .expect("scanning across a pole must not be a hard error");
+        assert!(
+            pts.is_empty(),
+            "1/x has no stationary points; got {:?}",
+            pts.iter().map(|p| p.x).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn every_reported_stationary_point_is_evaluable_and_flat() {
+        // The soundness property a pole-spanning bracket would violate: a
+        // reported point must lie in the domain and have a near-zero
+        // derivative there.
+        let f = ArithmaExpression::sub(
+            ArithmaExpression::pow(ArithmaExpression::var("x"), ArithmaExpression::from_i64(3)),
+            ArithmaExpression::mul(ArithmaExpression::from_i64(3), ArithmaExpression::var("x")),
+        );
+        let finder = ArithmaCriticalPoints::new();
+        let pts = finder
+            .find_stationary_points(&f, "x", ArithmaSearchRange::new(-3.0, 3.0))
+            .expect("x^3 - 3x is smooth");
+        assert_eq!(pts.len(), 2, "x^3 - 3x is flat at -1 and +1, got {pts:?}");
+        let derivative =
+            crate::calculus::differentiate(&f, "x").expect("polynomial differentiates");
+        for p in pts.iter() {
+            let slope =
+                eval_at(&derivative, "x", p.x).expect("a reported point must lie in the domain");
+            assert!(
+                slope.abs() < 1e-6,
+                "point {} is not stationary: f'({}) = {slope}",
+                p.x,
+                p.x
+            );
+        }
     }
 }

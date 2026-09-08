@@ -3,3 +3,30 @@ members = [
     "rust/arithma_core",
 ]
 resolver = "2"
+
+# Cargo only honours profile tables at the workspace root. There were none at
+# all before, so `--release` built with opt-level 3 but no cross-crate inlining
+# and 16 codegen units -- leaving measurable performance on the table for a
+# symbolic engine whose hot paths (expression simplification, integer
+# arithmetic, the trig/math hash lookups) are small functions called in tight
+# loops across module boundaries.
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+
+# Benchmarks need release-grade codegen, but a full cross-crate LTO rebuild per
+# `cargo bench` is slow. Thin LTO keeps most of the win at a fraction of the
+# link time.
+[profile.bench]
+inherits = "release"
+lto = "thin"
+
+# The test suite exercises deep recursive simplification; an unoptimised debug
+# build makes it needlessly slow. Optimise dependencies fully and the crate
+# under test lightly, keeping debug assertions and overflow checks on.
+[profile.test]
+opt-level = 1
+
+[profile.test.package."*"]
+opt-level = 3
