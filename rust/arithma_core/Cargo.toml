@@ -14,7 +14,7 @@ edition = "2021"
 # declared 1.74 and broken the build for anyone who believed it.
 rust-version = "1.82"
 description = "Symbolic mathematics engine: expressions, calculus, linear algebra, units and constants"
-license = "MIT"
+license-file = "LICENSE"
 repository = "https://github.com/andrewkwatts-maker/Arithma"
 homepage = "https://github.com/andrewkwatts-maker/Arithma"
 documentation = "https://docs.rs/arithma_core"
