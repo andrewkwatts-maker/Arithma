@@ -334,6 +334,24 @@ fn call_name(f: &ArithmaFunction, target: EmitTarget) -> Result<String, String> 
         ArithmaFunction::Ceil => "ceil",
         ArithmaFunction::Min => "min",
         ArithmaFunction::Max => "max",
+        // The inverse, hyperbolic and rounding families. These were missing,
+        // so every one of them PARSED and then could not be written back --
+        // `parse::FUNCTIONS` accepted 22 names and this table spelled 12. The
+        // symmetry test in `parse` now fails if the two ever drift again.
+        ArithmaFunction::Asin => "asin",
+        ArithmaFunction::Acos => "acos",
+        ArithmaFunction::Atan => "atan",
+        ArithmaFunction::Atan2 => "atan2",
+        ArithmaFunction::Sinh => "sinh",
+        ArithmaFunction::Cosh => "cosh",
+        ArithmaFunction::Tanh => "tanh",
+        ArithmaFunction::Asinh => "asinh",
+        ArithmaFunction::Acosh => "acosh",
+        ArithmaFunction::Atanh => "atanh",
+        ArithmaFunction::Cbrt => "cbrt",
+        ArithmaFunction::Log => "log",
+        ArithmaFunction::Round => "round",
+        ArithmaFunction::Sign => "sign",
         other => {
             return Err(format!(
                 "no {target:?} spelling for `{other:?}`; add it to call_name"
@@ -346,6 +364,14 @@ fn call_name(f: &ArithmaFunction, target: EmitTarget) -> Result<String, String> 
         (EmitTarget::Glsl, "ln") => "log".to_string(),
         (EmitTarget::Hlsl, "ln") => "log".to_string(),
         (EmitTarget::Hlsl, "log10") => "log10".to_string(),
+        // Neither shader language has a `cbrt`, and both have `pow`. Emitting
+        // `cbrt(x)` would compile nowhere; `pow(x, 1.0/3.0)` is what a shader
+        // author would have written by hand. It is signed-correct only for
+        // x >= 0, which is the same restriction `pow` itself carries there.
+        (EmitTarget::Glsl, "cbrt") | (EmitTarget::Hlsl, "cbrt") => return Ok("pow".to_string()),
+        // `sign` is `sign` in HLSL and `sign` in GLSL; `round` likewise. Listed
+        // as a no-op rather than omitted so the next person can see they were
+        // checked rather than forgotten.
         _ => name.to_string(),
     })
 }

@@ -42,7 +42,7 @@
 //! a plausible number. It was written that way here first, and the test below
 //! is what caught it.
 
-use crate::expression::ArithmaExpression;
+use crate::expression::{ArithmaExpression, Emit, EmitTarget};
 use crate::function::ArithmaFunction;
 
 /// The text could not be read as an expression.
@@ -491,6 +491,23 @@ pub fn parse_expression(text: &str) -> Result<ArithmaExpression, ParseError> {
     Ok(expr)
 }
 
+/// Write an expression back out as text this module can read again.
+///
+/// The inverse of [`parse_expression`], and tested as one: every expression
+/// the parser accepts is emitted and re-parsed, and the second emission must
+/// equal the first. A round trip is what lets a formula authored in a file
+/// survive being loaded into an editor, shown in a field, and saved again --
+/// without that, opening a project and saving it rewrites every formula as
+/// whatever number it happened to evaluate to.
+///
+/// This is [`EmitTarget::Text`], which is the only target that is also an
+/// *input* format. The others are one-way on purpose: LaTeX and MathML are for
+/// display, GLSL and HLSL are for a compiler, and none of them needs to be read
+/// back by this crate.
+pub fn to_text(expr: &ArithmaExpression) -> Result<String, String> {
+    expr.emit(EmitTarget::Text)
+}
+
 /// Every name a parsed expression refers to, sorted and deduplicated.
 ///
 /// What a caller needs in order to know which bindings to supply — and what
@@ -695,6 +712,96 @@ mod tests {
     #[test]
     fn whitespace_is_irrelevant() {
         assert!(close(eval("2*3+4"), eval("  2 * 3   +  4 ")));
+    }
+
+    #[test]
+    fn every_function_the_parser_accepts_can_also_be_written_back() {
+        // THE SYMMETRY TEST. `emit::call_name` was missing asin, acos, atan,
+        // atan2, the hyperbolics, cbrt, log, round and sign -- so the parser
+        // accepted 22 names and the emitter could spell 12, and ten of them
+        // parsed and then could not be written back at all. A round trip that
+        // works for `sin` and fails for `atan2` is worse than one that fails
+        // for both, because it is discovered by a user with a saved file.
+        for (name, _, arity) in FUNCTIONS {
+            let args = vec!["1"; *arity].join(", ");
+            let text = format!("{name}({args})");
+            let expr = parse_expression(&text).unwrap_or_else(|e| panic!("`{text}`: {e}"));
+            to_text(&expr).unwrap_or_else(|e| panic!("`{text}` parses but cannot be emitted: {e}"));
+        }
+    }
+
+    #[test]
+    fn text_round_trips_through_parse_and_emit() {
+        // Emit, re-parse, emit again: the second text must equal the first.
+        // Comparing the trees directly is not available -- ArithmaExpression
+        // does not implement PartialEq -- and comparing text is the stronger
+        // property anyway, since text is what a file holds.
+        let cases = [
+            "1 + 2",
+            "2 * 3 + 4",
+            "(2 + 3) * 4",
+            "2 ^ 3 ^ 2",
+            "-2 ^ 2",
+            "2 ^ -1",
+            "sqrt(16)",
+            "a * b - c",
+            "2 * pi * r",
+            "abs(-3)",
+            "atan2(1, 2)",
+            "sin(cos(x))",
+            "a / b / c",
+            "a - (b - c)",
+            "-x",
+        ];
+        for case in cases {
+            let once = to_text(&parse_expression(case).unwrap())
+                .unwrap_or_else(|e| panic!("`{case}`: {e}"));
+            let twice = to_text(&parse_expression(&once).unwrap_or_else(|e| {
+                panic!("`{case}` emitted `{once}`, which will not parse: {e}")
+            }))
+            .unwrap();
+            assert_eq!(once, twice, "`{case}` is not a fixed point");
+        }
+    }
+
+    #[test]
+    fn emitted_text_keeps_the_grouping_the_parse_gave_it() {
+        // Precedence surviving the round trip is the part that silently
+        // corrupts if it does not: every wrong answer is a plausible number.
+        let show = |s: &str| to_text(&parse_expression(s).unwrap()).unwrap();
+
+        assert_eq!(
+            show("2 ^ 3 ^ 2"),
+            "2^(3^2)",
+            "right-associative, and it says so"
+        );
+        assert_eq!(
+            show("(2 + 3) * 4"),
+            "(2 + 3) * 4",
+            "the parens are load-bearing"
+        );
+        assert_eq!(show("a - (b - c)"), "a - (b - c)");
+        assert_eq!(
+            show("2 * 3 + 4"),
+            "2 * 3 + 4",
+            "and not added where unneeded"
+        );
+
+        // Each of these re-evaluates to the same number it started with, which
+        // is the property the grouping exists to preserve.
+        for case in ["2 ^ 3 ^ 2", "-2 ^ 2", "2 ^ -1", "a - (b - c)", "a / b / c"] {
+            let mut b = ArithmaBindings::new();
+            for name in ["a", "b", "c"] {
+                b.insert(name.to_string(), 2.0);
+            }
+            let first = parse_expression(case).unwrap().evaluate(&b).unwrap();
+            let second = parse_expression(&show(case)).unwrap().evaluate(&b).unwrap();
+            assert!(
+                (first - second).abs() < 1e-12,
+                "`{case}` became `{}` and changed value: {first} -> {second}",
+                show(case)
+            );
+        }
     }
 
     #[test]
