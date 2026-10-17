@@ -2,12 +2,12 @@
 
 <!-- GENERATED FROM GitReview/extraction/modules.yaml - DO NOT EDIT BY HAND -->
 
-> **Crate:** `arithma_core` &nbsp;|&nbsp; **Source:** `plugins/pt-arithmos`
+> **Layer:** Mathematics &nbsp;|&nbsp; **Crate:** `arithma_core` &nbsp;|&nbsp; **Source:** `plugins/pt-arithmos`
 > **Extraction order:** 0 &nbsp;|&nbsp; **PyPI:** yes
 
 ## Purpose
 
-The symbolic and exact-arithmetic engine. Already extracted, tested and publish-ready; it is listed here because it is the module every parametric thing depends on, not because it needs work.
+The symbolic and exact-arithmetic engine, and the pipeline every formula in PlayTow lives in end to end: defined, composed across modules, solved and simplified here, and only lowered to Fourier, EML or floating point at evaluation. Storing the world as exact expressions is what makes it lossless and infinite. Already extracted, tested and publish-ready.
 
 ## Responsibilities
 
@@ -26,6 +26,7 @@ The symbolic and exact-arithmetic engine. Already extracted, tested and publish-
 These are registered to this module in the manifest. Each has exactly one owner
 across the whole extracted set; a reappearance elsewhere is a regression.
 
+- formula_precompile
 - symbolic_math
 
 ## Dependencies
