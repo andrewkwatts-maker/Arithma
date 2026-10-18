@@ -41,11 +41,14 @@
 //!
 //! ## Submodules
 //!
+//! - [`compare`] — public comparison builders (`step_ge_zero`, `ge`, `lt`),
+//!   since Arithma has no dedicated comparison operator.
 //! - [`iterative`] — stack-based, iterative simplification passes (no recursion;
 //!   per the engine's safety-critical standard "avoid recursion").
 //! - [`simplify`] — compile-time and runtime simplification rules driven by the
 //!   `SimplificationConfig` policy.
 
+pub mod compare;
 pub mod emit;
 pub mod iterative;
 pub mod simplify;

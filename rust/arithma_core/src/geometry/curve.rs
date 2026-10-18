@@ -15,8 +15,8 @@
 //! point sequence. Every curve is built as an [`ArithmaExpression`] tree, so
 //! it stays symbolic until evaluated.
 
+use crate::expression::compare::step_ge_zero;
 use crate::expression::ArithmaExpression;
-use crate::function::ArithmaFunction;
 
 /// Largest number of Bézier control points [`bezier`] will accept.
 pub const ARITHMA_BEZIER_MAX_CONTROL_POINTS: usize = 32;
@@ -219,18 +219,6 @@ fn reflect(far: &[ArithmaExpression], near: &[ArithmaExpression]) -> Vec<Arithma
             )
         })
         .collect()
-}
-
-/// `1` when `x` evaluates to a non-negative number, `0` otherwise. Stands in
-/// for a "greater-or-equal" comparison, which Arithma has no dedicated
-/// operator for.
-fn step_ge_zero(x: ArithmaExpression) -> ArithmaExpression {
-    let sign = ArithmaExpression::func(ArithmaFunction::Sign, vec![x]);
-    let abs_sign = ArithmaExpression::func(ArithmaFunction::Abs, vec![sign.clone()]);
-    ArithmaExpression::div(
-        ArithmaExpression::add(sign, abs_sign),
-        ArithmaExpression::from_i64(2),
-    )
 }
 
 /// Replaces every occurrence of the variable named `var` in `expr` with
