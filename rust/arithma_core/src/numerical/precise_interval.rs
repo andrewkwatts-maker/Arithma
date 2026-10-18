@@ -831,6 +831,14 @@ fn midpoint_and_half_width(x: &PreciseInterval) -> Result<(Rational, Rational), 
     Ok((mid, half_width))
 }
 
+/// Combine one node's already-evaluated arguments, then round the result
+/// outward to a bounded size. Without this, a wide expression tree (many
+/// `+`/`×` nodes each combining results that already carry a sizeable
+/// denominator, e.g. several independent `sqrt` sub-expressions) compounds
+/// those denominators multiplicatively with tree size, not just with
+/// requested precision, and can blow past [`ArithmaInteger`]'s digit cap
+/// even though every individual leaf was comfortably bounded. See
+/// [`ARITHMA_PRECISE_ROUNDING_GUARD`].
 fn combine_node(
     func: &ArithmaFunction,
     n: usize,
@@ -842,7 +850,9 @@ fn combine_node(
     }
     let start = values.len() - n;
     let args: Vec<PreciseInterval> = values.drain(start..).collect();
-    values.push(apply_function(func, &args, working_bits)?);
+    let result = apply_function(func, &args, working_bits)?;
+    let budget = working_bits.saturating_add(ARITHMA_PRECISE_ROUNDING_GUARD);
+    values.push(round_outward(&result, budget)?);
     Ok(())
 }
 
