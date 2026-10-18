@@ -377,6 +377,38 @@ fn mag_div_exact(a: &[u8], b: &[u8]) -> Option<Vec<u8>> {
     Some(quotient)
 }
 
+/// `a / b` by schoolbook long division, returning the truncated quotient and
+/// the remainder (both rounded toward zero). `None` only when `b` is zero.
+fn mag_div_rem(a: &[u8], b: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+    debug_assert!(!a.is_empty(), "empty dividend magnitude");
+    debug_assert!(!b.is_empty(), "empty divisor magnitude");
+    if b.iter().all(|&d| d == 0) {
+        return None;
+    }
+    let mut quotient = vec![0u8; a.len()];
+    let mut remainder: Vec<u8> = vec![0];
+    let mut i = a.len();
+    while i > 0 {
+        i -= 1;
+        // remainder = remainder * 256 + a[i]
+        remainder.insert(0, a[i]);
+        mag_trim(&mut remainder);
+        // At most 255 subtractions, so the loop is bounded by construction.
+        let mut digit: u16 = 0;
+        while digit < 256 && mag_cmp(&remainder, b) != core::cmp::Ordering::Less {
+            remainder = mag_sub(&remainder, b)?;
+            digit += 1;
+        }
+        debug_assert!(digit < 256, "quotient digit overflowed a byte");
+        quotient[i] = digit as u8;
+    }
+    mag_trim(&mut quotient);
+    mag_trim(&mut remainder);
+    debug_assert!(!quotient.is_empty(), "division produced no digits");
+    debug_assert!(!remainder.is_empty(), "remainder vanished");
+    Some((quotient, remainder))
+}
+
 impl ArithmaInternalInteger {
     /// True when the value is exactly zero, ignoring the sign bit.
     ///
@@ -529,6 +561,115 @@ impl ArithmaInternalInteger {
         debug_assert!(self.value.len() <= MAX_DIGITS, "magnitude past the cap");
         Some(acc)
     }
+
+    /// Floor-rounded quotient and the matching remainder: `q * other +
+    /// r == self`, `r` shares `other`'s sign (or is zero), and `q` rounds
+    /// toward negative infinity (so `-7 / 2` floors to `-4`, remainder `1`).
+    /// `None` when either operand is not a plain integer or `other` is zero.
+    fn floor_divmod(&self, other: &Self) -> Option<(Self, Self)> {
+        if !self.is_plain_integer() || !other.is_plain_integer() || other.is_zero() {
+            return None;
+        }
+        let (trunc_q, trunc_r) = mag_div_rem(&self.value, &other.value)?;
+        let (a_neg, b_neg) = (self.is_negative(), other.is_negative());
+        if trunc_r.iter().all(|&d| d == 0) {
+            let q = Self::from_parts(trunc_q, a_neg != b_neg);
+            return Some((q, Self::from_u64(0)));
+        }
+        if a_neg == b_neg {
+            // Truncating and floor division agree when dividend and divisor
+            // share a sign: the remainder already has the divisor's sign.
+            let q = Self::from_parts(trunc_q, false);
+            let r = Self::from_parts(trunc_r, b_neg);
+            return Some((q, r));
+        }
+        // Opposite signs: step the quotient one further toward -infinity and
+        // fold the truncated remainder back across the divisor.
+        let q = Self::from_parts(mag_add(&trunc_q, &[1])?, true);
+        let r = Self::from_parts(mag_sub(&other.value, &trunc_r)?, b_neg);
+        Some((q, r))
+    }
+
+    /// Exact floor division: the quotient rounds toward negative infinity.
+    /// `None` for non-plain integers or a zero divisor.
+    pub fn checked_div_floor(&self, other: &Self) -> Option<Self> {
+        let (quotient, _) = self.floor_divmod(other)?;
+        debug_assert!(quotient.is_plain_integer(), "floor quotient acquired a special flag");
+        Some(quotient)
+    }
+
+    /// The remainder paired with [`checked_div_floor`](Self::checked_div_floor):
+    /// it shares `other`'s sign (or is zero). `None` for non-plain integers or
+    /// a zero divisor.
+    pub fn checked_rem_euclid(&self, other: &Self) -> Option<Self> {
+        let (_, remainder) = self.floor_divmod(other)?;
+        debug_assert!(
+            remainder.is_plain_integer(),
+            "floor remainder acquired a special flag"
+        );
+        Some(remainder)
+    }
+
+    /// Compare two plain integers by signed value. `None` if either carries a
+    /// rational, NaN, infinity or imaginary flag.
+    pub fn cmp_integer(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        use core::cmp::Ordering;
+        if !self.is_plain_integer() || !other.is_plain_integer() {
+            return None;
+        }
+        if self.is_zero() && other.is_zero() {
+            return Some(Ordering::Equal);
+        }
+        match (self.is_negative(), other.is_negative()) {
+            (false, true) => Some(Ordering::Greater),
+            (true, false) => Some(Ordering::Less),
+            (false, false) => Some(mag_cmp(&self.value, &other.value)),
+            (true, true) => Some(mag_cmp(&other.value, &self.value)),
+        }
+    }
+
+    /// Read the value as an `i64`. `None` if it does not fit, or is rational,
+    /// NaN, infinite or imaginary.
+    pub fn to_i64(&self) -> Option<i64> {
+        if !self.is_plain_integer() {
+            return None;
+        }
+        debug_assert!(!self.value.is_empty(), "empty magnitude");
+        if self.value.len() > 8 && self.value[8..].iter().any(|&d| d != 0) {
+            return None;
+        }
+        let mut magnitude: u64 = 0;
+        for i in 0..self.value.len().min(8) {
+            magnitude |= u64::from(self.value[i]) << (8 * i);
+        }
+        if self.is_negative() {
+            if magnitude > i64::MIN.unsigned_abs() {
+                return None;
+            }
+            // `wrapping_neg` recovers `i64::MIN` exactly, which the positive
+            // range below cannot express.
+            Some((magnitude as i64).wrapping_neg())
+        } else {
+            if magnitude > i64::MAX as u64 {
+                return None;
+            }
+            Some(magnitude as i64)
+        }
+    }
+
+    /// Canonical `(negative, magnitude)` form used for hashing: little-endian
+    /// magnitude bytes with no trailing zero byte (zero is `(false, [])`).
+    /// `None` for a rational, NaN, infinite or imaginary value.
+    pub fn to_le_bytes_signed(&self) -> Option<(bool, Vec<u8>)> {
+        if !self.is_plain_integer() {
+            return None;
+        }
+        if self.is_zero() {
+            return Some((false, Vec::new()));
+        }
+        let top = self.value.iter().rposition(|&b| b != 0)?;
+        Some((self.is_negative(), self.value[..=top].to_vec()))
+    }
 }
 
 impl ArithmaInteger {
@@ -625,6 +766,49 @@ impl ArithmaInteger {
             return None;
         }
         self.value.to_u32()
+    }
+
+    /// Floor-rounded exact division: the quotient rounds toward negative
+    /// infinity. Unitless only, like [`checked_div_exact`](Self::checked_div_exact).
+    pub fn checked_div_floor(&self, other: &Self) -> Option<Self> {
+        if self.unit.is_some() || other.unit.is_some() {
+            return None;
+        }
+        let value = self.value.checked_div_floor(&other.value)?;
+        debug_assert!(value.is_plain_integer(), "floor quotient is not a plain integer");
+        Some(Self { value, unit: None })
+    }
+
+    /// The remainder paired with [`checked_div_floor`](Self::checked_div_floor),
+    /// sharing the divisor's sign. Unitless only.
+    pub fn checked_rem_euclid(&self, other: &Self) -> Option<Self> {
+        if self.unit.is_some() || other.unit.is_some() {
+            return None;
+        }
+        let value = self.value.checked_rem_euclid(&other.value)?;
+        debug_assert!(
+            value.is_plain_integer(),
+            "floor remainder is not a plain integer"
+        );
+        Some(Self { value, unit: None })
+    }
+
+    /// Compare two plain integers by signed value, ignoring unit attribution.
+    /// `None` if either carries a rational, NaN, infinity or imaginary flag.
+    pub fn cmp_integer(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        self.value.cmp_integer(&other.value)
+    }
+
+    /// Read the value as an `i64`, ignoring unit attribution. `None` if it
+    /// does not fit, or is rational, NaN, infinite or imaginary.
+    pub fn to_i64(&self) -> Option<i64> {
+        self.value.to_i64()
+    }
+
+    /// Canonical `(negative, magnitude)` form for hashing, ignoring unit
+    /// attribution. See [`ArithmaInternalInteger::to_le_bytes_signed`].
+    pub fn to_le_bytes_signed(&self) -> Option<(bool, Vec<u8>)> {
+        self.value.to_le_bytes_signed()
     }
 }
 

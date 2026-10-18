@@ -43,9 +43,14 @@ _(none)_
 - periodica
 - metaphysica
 - eml-math
+- topos
+- aphros
+- exoudenos
+- dynameis
 
 ## Open issues
 
+- Gaps raised by procedural generation (Topos grids, Aphros foam): exact floor, fract and mod on rationals; an N-dimensional vector (ArithmaVector is 3D); interval refinement to a requested precision; curve expressions (Bezier, Catmull-Rom).
 - DO NOT merge the 45k LOC that pt-arithmos holds and arithma_core does not. The repo is authoritative and publish-ready; the only requirement is that PT can import arithma_core.
 - Licence contradiction, owner decision: LICENSE and both manifests say MIT while 62 source files say All Rights Reserved. Blocks publication.
 
