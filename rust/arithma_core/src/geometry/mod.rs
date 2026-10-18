@@ -20,13 +20,16 @@
 //! - [`plane`] — `ArithmaPlane` infinite plane.
 //! - [`sphere`] — `ArithmaSphere` sphere.
 //! - [`intersection`] — closed-form intersection routines.
+//! - [`curve`] — N-dimensional Bézier, Catmull–Rom and piecewise curves.
 
+pub mod curve;
 pub mod intersection;
 pub mod line;
 pub mod plane;
 pub mod sphere;
 pub mod vector;
 
+pub use curve::{bezier, catmull_rom, ArithmaCurveError, CatmullRomKind, PiecewiseCurve};
 pub use intersection::{ArithmaIntersection, ArithmaIntersectionResult};
 pub use line::ArithmaLine;
 pub use plane::ArithmaPlane;
