@@ -810,6 +810,21 @@ impl ArithmaInteger {
     pub fn to_le_bytes_signed(&self) -> Option<(bool, Vec<u8>)> {
         self.value.to_le_bytes_signed()
     }
+
+    /// Build the integer this value's `(negative, magnitude)` pair encodes:
+    /// the exact inverse of [`Self::to_le_bytes_signed`]. An empty magnitude
+    /// is zero.
+    pub fn from_le_bytes_signed(negative: bool, magnitude: &[u8]) -> Self {
+        let bytes = if magnitude.is_empty() {
+            vec![0]
+        } else {
+            magnitude.to_vec()
+        };
+        Self {
+            value: ArithmaInternalInteger::from_parts(bytes, negative),
+            unit: None,
+        }
+    }
 }
 
 /// Unit for the result of an additive operation, or `None` if incompatible.
@@ -1123,5 +1138,19 @@ mod tests {
         assert_eq!(i(-1).to_u32(), None, "negative exponents are not supported");
         let big = i(2).checked_pow(40).expect("2^40");
         assert_eq!(big.to_u32(), None, "2^40 does not fit a u32");
+    }
+
+    #[test]
+    fn from_le_bytes_signed_round_trips_with_to_le_bytes_signed() {
+        for n in [0i64, 1, -1, 42, -42, i64::MIN, i64::MAX] {
+            let original = ArithmaInteger::from_i64(n);
+            let (negative, magnitude) = original.to_le_bytes_signed().expect("plain integer");
+            let rebuilt = ArithmaInteger::from_le_bytes_signed(negative, &magnitude);
+            assert_eq!(rebuilt.cmp_integer(&original), Some(core::cmp::Ordering::Equal));
+        }
+        let two_90 = ArithmaInteger::from_u64(2).checked_pow(90).expect("2^90");
+        let (negative, magnitude) = two_90.to_le_bytes_signed().expect("plain integer");
+        let rebuilt = ArithmaInteger::from_le_bytes_signed(negative, &magnitude);
+        assert_eq!(rebuilt.cmp_integer(&two_90), Some(core::cmp::Ordering::Equal));
     }
 }
