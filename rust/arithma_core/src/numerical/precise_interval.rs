@@ -82,7 +82,7 @@ const ARITHMA_PRECISE_RETRY_CAP: u32 = 8;
 
 /// Extra bits of internal working precision added above the caller's
 /// request, to absorb the dependency problem's over-estimation.
-const ARITHMA_PRECISE_GUARD_BITS: u32 = 32;
+const ARITHMA_PRECISE_GUARD_BITS: u32 = 16;
 
 /// The largest `pow` exponent magnitude this module will expand.
 const ARITHMA_PRECISE_MAX_POWER_EXPONENT: i64 = 1024;
@@ -96,7 +96,7 @@ const ARITHMA_PRECISE_MAX_POWER_EXPONENT: i64 = 1024;
 /// Rounding outward each step keeps every intermediate a bounded size, at
 /// the cost of an extra, utterly negligible `iterations * 2^-budget` of
 /// error alongside the already-conservative tail bound.
-const ARITHMA_PRECISE_ROUNDING_GUARD: u32 = 64;
+const ARITHMA_PRECISE_ROUNDING_GUARD: u32 = 24;
 
 /// An exact rational number: `num / den`, `den` always positive and the
 /// pair always reduced. See the module doc for why this never rounds.
@@ -162,30 +162,30 @@ impl Rational {
         Ok(Self { num: negate(&self.num)?, den: self.den.clone() })
     }
 
-    /// `self + other`.
+    /// `self + other`, *unreduced* (see [`Self::raw`]).
     pub fn add(&self, other: &Self) -> Result<Self, String> {
         let err = || "precise_interval: addition overflow".to_string();
         let a = self.num.checked_mul(&other.den).ok_or_else(err)?;
         let b = other.num.checked_mul(&self.den).ok_or_else(err)?;
         let n = a.checked_add(&b).ok_or_else(err)?;
         let d = self.den.checked_mul(&other.den).ok_or_else(err)?;
-        Self::new(n, d)
+        Self::raw(n, d)
     }
 
-    /// `self - other`.
+    /// `self - other`, *unreduced*.
     pub fn sub(&self, other: &Self) -> Result<Self, String> {
         self.add(&other.neg()?)
     }
 
-    /// `self * other`.
+    /// `self * other`, *unreduced*.
     pub fn mul(&self, other: &Self) -> Result<Self, String> {
         let err = || "precise_interval: multiplication overflow".to_string();
         let n = self.num.checked_mul(&other.num).ok_or_else(err)?;
         let d = self.den.checked_mul(&other.den).ok_or_else(err)?;
-        Self::new(n, d)
+        Self::raw(n, d)
     }
 
-    /// `self / other`. `Err` if `other` is zero.
+    /// `self / other`, *unreduced*. `Err` if `other` is zero.
     pub fn div(&self, other: &Self) -> Result<Self, String> {
         if other.is_zero() {
             return Err("precise_interval: division by zero".into());
@@ -193,15 +193,39 @@ impl Rational {
         let err = || "precise_interval: division overflow".to_string();
         let n = self.num.checked_mul(&other.den).ok_or_else(err)?;
         let d = self.den.checked_mul(&other.num).ok_or_else(err)?;
-        Self::new(n, d)
+        Self::raw(n, d)
     }
 
-    /// `self` raised to a non-negative integer power.
+    /// `self` raised to a non-negative integer power, *unreduced*.
     pub fn pow_u32(&self, exponent: u32) -> Result<Self, String> {
         let err = || "precise_interval: power overflow".to_string();
         let n = self.num.checked_pow(exponent).ok_or_else(err)?;
         let d = self.den.checked_pow(exponent).ok_or_else(err)?;
-        Self::new(n, d)
+        Self::raw(n, d)
+    }
+
+    /// Build `num/den`, fixing the sign so `den > 0`, but *without*
+    /// reducing by gcd. [`Self::new`] is the always-reduced public
+    /// constructor; the arithmetic combinators above use this instead,
+    /// because they run on essentially every expression-tree node (see
+    /// [`combine_node`]) and reducing every one of them is the single
+    /// largest cost in this module — general Euclidean reduction needs a
+    /// full-width division per step. Skipping it here is sound because
+    /// reduction is never required for *correctness* (every operation here
+    /// is exact and sign-aware regardless of common factors); size is
+    /// instead kept bounded by the explicit outward rounding
+    /// [`combine_node`] and the bounded loops apply after every step (see
+    /// [`ARITHMA_PRECISE_ROUNDING_GUARD`]), which *does* reduce (cheaply,
+    /// against a known power of two: [`reduce_against_pow2`]).
+    fn raw(num: ArithmaInteger, den: ArithmaInteger) -> Result<Self, String> {
+        if den.is_zero() {
+            return Err("precise_interval: rational with zero denominator".into());
+        }
+        if den.value.is_negative() {
+            Ok(Self { num: negate(&num)?, den: negate(&den)? })
+        } else {
+            Ok(Self { num, den })
+        }
     }
 
     /// Exact three-way comparison, by cross-multiplying (both denominators
@@ -304,7 +328,51 @@ fn round_down(r: &Rational, bits: u32) -> Result<Rational, String> {
     let scale = pow2(bits)?;
     let scaled = r.num.checked_mul(&scale).ok_or_else(err)?;
     let floored = scaled.checked_div_floor(&r.den).ok_or_else(err)?;
-    Rational::new(floored, scale)
+    reduce_against_pow2(floored, bits)
+}
+
+/// `floored / 2^bits`, reduced. The denominator here is *known* to be a
+/// power of two (every caller is [`round_down`]/[`round_up`]), so the
+/// reduction is `2^v` where `v` is `floored`'s 2-adic valuation (capped at
+/// `bits`): found by peeling off factors of two one at a time with cheap
+/// `div_floor`/`rem_euclid` by the small constant 2.
+///
+/// This exists because rounding runs on every combined node (see
+/// [`combine_node`]) and every bounded-loop iteration, so it dominates how
+/// often this module reduces a fraction. General Euclid
+/// (`gcd_nonnegative`, kept for [`Rational::new`]'s ordinary arithmetic)
+/// needs a full-width division per step and, for two ~200-bit operands, can
+/// take on the order of a hundred such steps — measurably slow at this
+/// call volume. Peeling factors of two is `O(bits)` cheap divisions
+/// instead, with no general division at all.
+fn reduce_against_pow2(numerator: ArithmaInteger, bits: u32) -> Result<Rational, String> {
+    if numerator.is_zero() {
+        return Ok(Rational::zero());
+    }
+    // `numerator`'s 2-adic valuation, capped at `bits`: found by scanning
+    // its base-256, least-significant-byte-first magnitude for trailing
+    // zero bits -- no division at all, let alone one per bit, is needed
+    // just to *count* them.
+    let mut zero_bits: u32 = 0;
+    for &byte in numerator.value.value.iter() {
+        if zero_bits >= bits {
+            break;
+        }
+        if byte == 0 {
+            zero_bits += 8;
+            continue;
+        }
+        zero_bits += byte.trailing_zeros();
+        break;
+    }
+    let shift = zero_bits.min(bits);
+    let err = || "precise_interval: rounding reduction failed".to_string();
+    let num = if shift == 0 {
+        numerator
+    } else {
+        numerator.checked_div_exact(&pow2(shift)?).ok_or_else(err)?
+    };
+    Ok(Rational { num, den: pow2(bits - shift)? })
 }
 
 /// The smallest multiple of `1/2^bits` that is not less than `r`: rounds
