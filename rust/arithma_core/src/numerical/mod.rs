@@ -18,16 +18,20 @@
 //!   underlying iterative solvers.
 //! - [`critical_points`] — local maxima/minima/saddles.
 //! - [`interval_analysis`] — interval arithmetic for guaranteed bounds.
+//! - [`precise_interval`] — exact-rational evaluation of closed-form
+//!   constant expressions to a requested bit precision.
 //! - [`root_finding`] — bisection / Newton-Raphson / secant.
 
 pub mod critical_points;
 pub mod interval_analysis;
 pub mod methods;
+pub mod precise_interval;
 pub mod root_finding;
 
 pub use critical_points::{ArithmaCriticalPoint, ArithmaCriticalPointKind};
 pub use interval_analysis::ArithmaInterval;
 pub use methods::{solve_with_method, ArithmaNumericalMethod};
+pub use precise_interval::{evaluate_precise, PreciseInterval, Rational};
 pub use root_finding::{
     find_root_bisection, find_root_newton_raphson, find_root_secant, ArithmaRootFindingConfig,
     ArithmaRootFindingResult,
