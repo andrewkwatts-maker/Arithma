@@ -146,7 +146,11 @@ fn euclidean_distance(a: &[ArithmaExpression], b: &[ArithmaExpression]) -> Arith
 }
 
 /// Knot spacing between two consecutive controls for a given [`CatmullRomKind`].
-fn knot_step(a: &[ArithmaExpression], b: &[ArithmaExpression], kind: CatmullRomKind) -> ArithmaExpression {
+fn knot_step(
+    a: &[ArithmaExpression],
+    b: &[ArithmaExpression],
+    kind: CatmullRomKind,
+) -> ArithmaExpression {
     match kind {
         CatmullRomKind::Uniform => ArithmaExpression::from_i64(1),
         CatmullRomKind::Centripetal => ArithmaExpression::sqrt(euclidean_distance(a, b)),
@@ -166,8 +170,7 @@ fn blend(
     let denom = ArithmaExpression::sub(t_hi.clone(), t_lo.clone());
     let w_hi = ArithmaExpression::sub(t.clone(), t_lo.clone());
     let w_lo = ArithmaExpression::sub(t_hi.clone(), t.clone());
-    p_lo
-        .iter()
+    p_lo.iter()
         .zip(p_hi.iter())
         .map(|(lo, hi)| {
             let term_lo = ArithmaExpression::mul(w_lo.clone(), lo.clone());
@@ -226,10 +229,9 @@ fn reflect(far: &[ArithmaExpression], near: &[ArithmaExpression]) -> Vec<Arithma
 /// embedded at offset `by` along a shared global parameter.
 fn shift_variable(expr: &ArithmaExpression, var: &str, by: i64) -> ArithmaExpression {
     match expr {
-        ArithmaExpression::Variable(name) if name == var => ArithmaExpression::sub(
-            ArithmaExpression::var(var),
-            ArithmaExpression::from_i64(by),
-        ),
+        ArithmaExpression::Variable(name) if name == var => {
+            ArithmaExpression::sub(ArithmaExpression::var(var), ArithmaExpression::from_i64(by))
+        }
         ArithmaExpression::Function(f, args) => ArithmaExpression::func(
             f.clone(),
             args.iter().map(|a| shift_variable(a, var, by)).collect(),
@@ -271,7 +273,14 @@ impl PiecewiseCurve {
             } else {
                 points[i + 2].clone()
             };
-            segments.push(catmull_rom(&p0, &points[i], &points[i + 1], &p3, kind, parameter)?);
+            segments.push(catmull_rom(
+                &p0,
+                &points[i],
+                &points[i + 1],
+                &p3,
+                kind,
+                parameter,
+            )?);
         }
         Ok(Self { segments })
     }

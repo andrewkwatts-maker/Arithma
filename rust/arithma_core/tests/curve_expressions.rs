@@ -3,11 +3,16 @@
 //! Bézier, Catmull–Rom (uniform, centripetal, chordal) and piecewise curves.
 
 use arithma_core::expression::{ArithmaBindings, ArithmaExpression, Differentiable, Evaluable};
-use arithma_core::geometry::curve::{bezier, catmull_rom, ArithmaCurveError, CatmullRomKind, PiecewiseCurve};
+use arithma_core::geometry::curve::{
+    bezier, catmull_rom, ArithmaCurveError, CatmullRomKind, PiecewiseCurve,
+};
 
 /// Builds a point `Vec<ArithmaExpression>` from integer coordinates.
 fn pt(coords: &[i64]) -> Vec<ArithmaExpression> {
-    coords.iter().map(|&c| ArithmaExpression::from_i64(c)).collect()
+    coords
+        .iter()
+        .map(|&c| ArithmaExpression::from_i64(c))
+        .collect()
 }
 
 /// Evaluates every axis of `exprs` with `parameter` bound to `t`.
@@ -16,7 +21,10 @@ fn eval_at(exprs: &[ArithmaExpression], parameter: &str, t: f64) -> Vec<f64> {
     bindings.insert(parameter.to_string(), t);
     exprs
         .iter()
-        .map(|e| e.evaluate(&bindings).expect("curve expression should evaluate"))
+        .map(|e| {
+            e.evaluate(&bindings)
+                .expect("curve expression should evaluate")
+        })
         .collect()
 }
 
@@ -44,7 +52,12 @@ fn assert_close(got: &[f64], want: &[f64], tol: f64) {
 
 #[test]
 fn bezier_endpoints_equal_first_and_last_control_points() {
-    let control = vec![pt(&[0, 0, 0]), pt(&[1, 5, -2]), pt(&[4, -3, 1]), pt(&[6, 2, 7])];
+    let control = vec![
+        pt(&[0, 0, 0]),
+        pt(&[1, 5, -2]),
+        pt(&[4, -3, 1]),
+        pt(&[6, 2, 7]),
+    ];
     let curve = bezier(&control, "t").expect("bezier should build");
     assert_close(&eval_at(&curve, "t", 0.0), &[0.0, 0.0, 0.0], 1e-12);
     assert_close(&eval_at(&curve, "t", 1.0), &[6.0, 2.0, 7.0], 1e-12);
@@ -160,7 +173,10 @@ fn piecewise_curve_is_c1_at_interior_joints_for_uniform_kind() {
                 .expect("should differentiate")
                 .evaluate(&bindings_start)
                 .expect("should evaluate");
-            assert!((left - right).abs() < 1e-9, "joint {k} axis {axis}: {left} vs {right}");
+            assert!(
+                (left - right).abs() < 1e-9,
+                "joint {k} axis {axis}: {left} vs {right}"
+            );
         }
     }
 }
@@ -169,7 +185,10 @@ fn piecewise_curve_is_c1_at_interior_joints_for_uniform_kind() {
 fn dimension_mismatch_is_an_error() {
     let control = vec![pt(&[0, 0]), vec![ArithmaExpression::from_i64(1)]];
     match bezier(&control, "t") {
-        Err(ArithmaCurveError::DimensionMismatch { expected: 2, got: 1 }) => {}
+        Err(ArithmaCurveError::DimensionMismatch {
+            expected: 2,
+            got: 1,
+        }) => {}
         other => panic!("expected a dimension mismatch error, got {other:?}"),
     }
 

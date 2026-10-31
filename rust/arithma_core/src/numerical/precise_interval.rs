@@ -109,7 +109,10 @@ pub struct Rational {
 impl Rational {
     /// The exact value zero.
     pub fn zero() -> Self {
-        Self { num: ArithmaInteger::zero(), den: ArithmaInteger::from_i64(1) }
+        Self {
+            num: ArithmaInteger::zero(),
+            den: ArithmaInteger::from_i64(1),
+        }
     }
 
     /// Build `num/den`, reducing by gcd. `den` must be non-zero.
@@ -129,7 +132,10 @@ impl Rational {
         let err = || "precise_interval: reduction failed".to_string();
         let num_r = n.checked_div_exact(&g).ok_or_else(err)?;
         let den_r = d.checked_div_exact(&g).ok_or_else(err)?;
-        Ok(Self { num: num_r, den: den_r })
+        Ok(Self {
+            num: num_r,
+            den: den_r,
+        })
     }
 
     /// Build the exact value `n`.
@@ -154,12 +160,19 @@ impl Rational {
 
     /// `|self|`.
     pub fn abs(&self) -> Result<Self, String> {
-        if self.is_negative() { self.neg() } else { Ok(self.clone()) }
+        if self.is_negative() {
+            self.neg()
+        } else {
+            Ok(self.clone())
+        }
     }
 
     /// `-self`.
     pub fn neg(&self) -> Result<Self, String> {
-        Ok(Self { num: negate(&self.num)?, den: self.den.clone() })
+        Ok(Self {
+            num: negate(&self.num)?,
+            den: self.den.clone(),
+        })
     }
 
     /// `self + other`, *unreduced* (see [`Self::raw`]).
@@ -222,7 +235,10 @@ impl Rational {
             return Err("precise_interval: rational with zero denominator".into());
         }
         if den.value.is_negative() {
-            Ok(Self { num: negate(&num)?, den: negate(&den)? })
+            Ok(Self {
+                num: negate(&num)?,
+                den: negate(&den)?,
+            })
         } else {
             Ok(Self { num, den })
         }
@@ -247,12 +263,17 @@ impl Rational {
 /// `-v`, for a plain integer. `Err` only if `v` somehow is not plain, which
 /// cannot happen for a value built by this module.
 fn negate(v: &ArithmaInteger) -> Result<ArithmaInteger, String> {
-    v.checked_neg().ok_or_else(|| "precise_interval: negation failed".to_string())
+    v.checked_neg()
+        .ok_or_else(|| "precise_interval: negation failed".to_string())
 }
 
 /// `|v|`, for a plain integer.
 fn abs_integer(v: &ArithmaInteger) -> Result<ArithmaInteger, String> {
-    if v.value.is_negative() { negate(v) } else { Ok(v.clone()) }
+    if v.value.is_negative() {
+        negate(v)
+    } else {
+        Ok(v.clone())
+    }
 }
 
 /// `gcd(|a|, |b|)` via Euclid's algorithm, capped.
@@ -275,18 +296,36 @@ fn gcd_nonnegative(a: &ArithmaInteger, b: &ArithmaInteger) -> Result<ArithmaInte
 }
 
 fn rational_max(a: &Rational, b: &Rational) -> Result<Rational, String> {
-    Ok(if a.cmp(b)? == Ordering::Less { b.clone() } else { a.clone() })
+    Ok(if a.cmp(b)? == Ordering::Less {
+        b.clone()
+    } else {
+        a.clone()
+    })
 }
 
 fn rational_min(a: &Rational, b: &Rational) -> Result<Rational, String> {
-    Ok(if a.cmp(b)? == Ordering::Greater { b.clone() } else { a.clone() })
+    Ok(if a.cmp(b)? == Ordering::Greater {
+        b.clone()
+    } else {
+        a.clone()
+    })
 }
 
-fn rational_max4(a: &Rational, b: &Rational, c: &Rational, d: &Rational) -> Result<Rational, String> {
+fn rational_max4(
+    a: &Rational,
+    b: &Rational,
+    c: &Rational,
+    d: &Rational,
+) -> Result<Rational, String> {
     rational_max(&rational_max(a, b)?, &rational_max(c, d)?)
 }
 
-fn rational_min4(a: &Rational, b: &Rational, c: &Rational, d: &Rational) -> Result<Rational, String> {
+fn rational_min4(
+    a: &Rational,
+    b: &Rational,
+    c: &Rational,
+    d: &Rational,
+) -> Result<Rational, String> {
     rational_min(&rational_min(a, b)?, &rational_min(c, d)?)
 }
 
@@ -372,7 +411,10 @@ fn reduce_against_pow2(numerator: ArithmaInteger, bits: u32) -> Result<Rational,
     } else {
         numerator.checked_div_exact(&pow2(shift)?).ok_or_else(err)?
     };
-    Ok(Rational { num, den: pow2(bits - shift)? })
+    Ok(Rational {
+        num,
+        den: pow2(bits - shift)?,
+    })
 }
 
 /// The smallest multiple of `1/2^bits` that is not less than `r`: rounds
@@ -385,7 +427,10 @@ fn round_up(r: &Rational, bits: u32) -> Result<Rational, String> {
 /// Round `iv`'s bounds outward (down/up) to a bounded `1/2^bits` grid,
 /// never narrowing the enclosure.
 fn round_outward(iv: &PreciseInterval, bits: u32) -> Result<PreciseInterval, String> {
-    Ok(PreciseInterval { lo: round_down(&iv.lo, bits)?, hi: round_up(&iv.hi, bits)? })
+    Ok(PreciseInterval {
+        lo: round_down(&iv.lo, bits)?,
+        hi: round_up(&iv.hi, bits)?,
+    })
 }
 
 /// `max(|lo|, |hi|)`: a conservative magnitude bound for `iv`.
@@ -406,7 +451,10 @@ pub struct PreciseInterval {
 impl PreciseInterval {
     /// A degenerate interval holding the single exact value `v`.
     pub fn point(v: Rational) -> Self {
-        Self { lo: v.clone(), hi: v }
+        Self {
+            lo: v.clone(),
+            hi: v,
+        }
     }
 
     /// True iff `0` lies in `[lo, hi]`.
@@ -418,17 +466,26 @@ impl PreciseInterval {
 
     /// `self + other`.
     pub fn add(&self, other: &Self) -> Result<Self, String> {
-        Ok(Self { lo: self.lo.add(&other.lo)?, hi: self.hi.add(&other.hi)? })
+        Ok(Self {
+            lo: self.lo.add(&other.lo)?,
+            hi: self.hi.add(&other.hi)?,
+        })
     }
 
     /// `self - other`.
     pub fn sub(&self, other: &Self) -> Result<Self, String> {
-        Ok(Self { lo: self.lo.sub(&other.hi)?, hi: self.hi.sub(&other.lo)? })
+        Ok(Self {
+            lo: self.lo.sub(&other.hi)?,
+            hi: self.hi.sub(&other.lo)?,
+        })
     }
 
     /// `-self`.
     pub fn neg(&self) -> Result<Self, String> {
-        Ok(Self { lo: self.hi.neg()?, hi: self.lo.neg()? })
+        Ok(Self {
+            lo: self.hi.neg()?,
+            hi: self.lo.neg()?,
+        })
     }
 
     /// `self * other`, by the corner hull.
@@ -437,7 +494,10 @@ impl PreciseInterval {
         let p2 = self.lo.mul(&other.hi)?;
         let p3 = self.hi.mul(&other.lo)?;
         let p4 = self.hi.mul(&other.hi)?;
-        Ok(Self { lo: rational_min4(&p1, &p2, &p3, &p4)?, hi: rational_max4(&p1, &p2, &p3, &p4)? })
+        Ok(Self {
+            lo: rational_min4(&p1, &p2, &p3, &p4)?,
+            hi: rational_max4(&p1, &p2, &p3, &p4)?,
+        })
     }
 
     /// `self / other`. `Err` if `other` contains zero.
@@ -449,7 +509,10 @@ impl PreciseInterval {
         let q2 = self.lo.div(&other.hi)?;
         let q3 = self.hi.div(&other.lo)?;
         let q4 = self.hi.div(&other.hi)?;
-        Ok(Self { lo: rational_min4(&q1, &q2, &q3, &q4)?, hi: rational_max4(&q1, &q2, &q3, &q4)? })
+        Ok(Self {
+            lo: rational_min4(&q1, &q2, &q3, &q4)?,
+            hi: rational_max4(&q1, &q2, &q3, &q4)?,
+        })
     }
 
     /// True iff every value `self` can take is strictly greater than every
@@ -492,12 +555,21 @@ fn pow_int_interval(base: &PreciseInterval, k: i64) -> Result<PreciseInterval, S
         let b = base.hi.abs()?;
         let outer = rational_max(&a, &b)?.pow_u32(k_u)?;
         if base.contains_zero() {
-            Ok(PreciseInterval { lo: Rational::zero(), hi: outer })
+            Ok(PreciseInterval {
+                lo: Rational::zero(),
+                hi: outer,
+            })
         } else {
-            Ok(PreciseInterval { lo: rational_min(&a, &b)?.pow_u32(k_u)?, hi: outer })
+            Ok(PreciseInterval {
+                lo: rational_min(&a, &b)?.pow_u32(k_u)?,
+                hi: outer,
+            })
         }
     } else {
-        Ok(PreciseInterval { lo: base.lo.pow_u32(k_u)?, hi: base.hi.pow_u32(k_u)? })
+        Ok(PreciseInterval {
+            lo: base.lo.pow_u32(k_u)?,
+            hi: base.hi.pow_u32(k_u)?,
+        })
     }
 }
 
@@ -551,7 +623,11 @@ fn sqrt_bounds(x: &Rational, target_bits: u32) -> Result<PreciseInterval, String
     }
     let budget = target_bits.saturating_add(ARITHMA_PRECISE_ROUNDING_GUARD);
     let one = Rational::from_i64(1)?;
-    let mut hi = if x.cmp(&one)? == Ordering::Greater { round_up(x, budget)? } else { one.clone() };
+    let mut hi = if x.cmp(&one)? == Ordering::Greater {
+        round_up(x, budget)?
+    } else {
+        one.clone()
+    };
     let two = Rational::from_i64(2)?;
     let threshold = pow2_recip(target_bits)?;
     for _ in 0..ARITHMA_PRECISE_NEWTON_CAP {
@@ -583,7 +659,10 @@ fn exp_bounds(x: &Rational, target_bits: u32) -> Result<PreciseInterval, String>
         let divisor = PreciseInterval::point(Rational::from_i64(n)?);
         let next = round_outward(&term.mul(&x_iv)?.div(&divisor)?, budget)?;
         if let Some(tail) = tail_bound_if_enough(&next, &term, &sum, target_bits)? {
-            return Ok(PreciseInterval { lo: sum.lo.sub(&tail)?, hi: sum.hi.add(&tail)? });
+            return Ok(PreciseInterval {
+                lo: sum.lo.sub(&tail)?,
+                hi: sum.hi.add(&tail)?,
+            });
         }
         sum = round_outward(&sum.add(&next)?, budget)?;
         term = next;
@@ -611,11 +690,16 @@ fn ln_bounds(x: &Rational, target_bits: u32) -> Result<PreciseInterval, String> 
         if k > ARITHMA_PRECISE_SERIES_CAP {
             return Err("evaluate_precise: ln series cap exceeded".into());
         }
-        let factor = PreciseInterval::point(Rational::from_i64(2 * k + 1)?.div(&Rational::from_i64(2 * k + 3)?)?);
+        let factor = PreciseInterval::point(
+            Rational::from_i64(2 * k + 1)?.div(&Rational::from_i64(2 * k + 3)?)?,
+        );
         let next = round_outward(&term.mul(&t2)?.mul(&factor)?, budget)?;
         if let Some(tail) = tail_bound_if_enough(&next, &term, &sum, target_bits)? {
             let two = Rational::from_i64(2)?;
-            return Ok(PreciseInterval { lo: sum.lo.sub(&tail)?.mul(&two)?, hi: sum.hi.add(&tail)?.mul(&two)? });
+            return Ok(PreciseInterval {
+                lo: sum.lo.sub(&tail)?.mul(&two)?,
+                hi: sum.hi.add(&tail)?.mul(&two)?,
+            });
         }
         sum = round_outward(&sum.add(&next)?, budget)?;
         term = next;
@@ -627,7 +711,10 @@ fn ln_bounds(x: &Rational, target_bits: u32) -> Result<PreciseInterval, String> 
 fn clamp_unit(iv: PreciseInterval) -> Result<PreciseInterval, String> {
     let neg_one = Rational::from_i64(-1)?;
     let one = Rational::from_i64(1)?;
-    Ok(PreciseInterval { lo: rational_max(&iv.lo, &neg_one)?, hi: rational_min(&iv.hi, &one)? })
+    Ok(PreciseInterval {
+        lo: rational_max(&iv.lo, &neg_one)?,
+        hi: rational_min(&iv.hi, &one)?,
+    })
 }
 
 /// `sin(x)`, by Taylor series (`term_{k+1} = term_k * (-x^2) / ((2k+2)(2k+3))`).
@@ -646,7 +733,10 @@ fn sin_bounds(x: &Rational, target_bits: u32) -> Result<PreciseInterval, String>
         let denom = PreciseInterval::point(Rational::from_i64((2 * k + 2) * (2 * k + 3))?);
         let next = round_outward(&term.mul(&neg_x2)?.div(&denom)?, budget)?;
         if let Some(tail) = tail_bound_if_enough(&next, &term, &sum, target_bits)? {
-            return clamp_unit(PreciseInterval { lo: sum.lo.sub(&tail)?, hi: sum.hi.add(&tail)? });
+            return clamp_unit(PreciseInterval {
+                lo: sum.lo.sub(&tail)?,
+                hi: sum.hi.add(&tail)?,
+            });
         }
         sum = round_outward(&sum.add(&next)?, budget)?;
         term = next;
@@ -670,7 +760,10 @@ fn cos_bounds(x: &Rational, target_bits: u32) -> Result<PreciseInterval, String>
         let denom = PreciseInterval::point(Rational::from_i64((2 * k + 1) * (2 * k + 2))?);
         let next = round_outward(&term.mul(&neg_x2)?.div(&denom)?, budget)?;
         if let Some(tail) = tail_bound_if_enough(&next, &term, &sum, target_bits)? {
-            return clamp_unit(PreciseInterval { lo: sum.lo.sub(&tail)?, hi: sum.hi.add(&tail)? });
+            return clamp_unit(PreciseInterval {
+                lo: sum.lo.sub(&tail)?,
+                hi: sum.hi.add(&tail)?,
+            });
         }
         sum = round_outward(&sum.add(&next)?, budget)?;
         term = next;
@@ -691,10 +784,15 @@ fn arctan_bounds(x: &Rational, target_bits: u32) -> Result<PreciseInterval, Stri
         if k > ARITHMA_PRECISE_SERIES_CAP {
             return Err("evaluate_precise: atan series cap exceeded".into());
         }
-        let factor = PreciseInterval::point(Rational::from_i64(2 * k + 1)?.div(&Rational::from_i64(2 * k + 3)?)?);
+        let factor = PreciseInterval::point(
+            Rational::from_i64(2 * k + 1)?.div(&Rational::from_i64(2 * k + 3)?)?,
+        );
         let next = round_outward(&term.mul(&neg_x2)?.mul(&factor)?, budget)?;
         if let Some(tail) = tail_bound_if_enough(&next, &term, &sum, target_bits)? {
-            return Ok(PreciseInterval { lo: sum.lo.sub(&tail)?, hi: sum.hi.add(&tail)? });
+            return Ok(PreciseInterval {
+                lo: sum.lo.sub(&tail)?,
+                hi: sum.hi.add(&tail)?,
+            });
         }
         sum = round_outward(&sum.add(&next)?, budget)?;
         term = next;
@@ -760,8 +858,12 @@ fn enter_node<'a>(
         E::Sum { .. } => return Err("evaluate_precise: unsupported node Sum".into()),
         E::Limit { .. } => return Err("evaluate_precise: unsupported node Limit".into()),
         E::Product { .. } => return Err("evaluate_precise: unsupported node Product".into()),
-        E::Conditional { .. } => return Err("evaluate_precise: unsupported node Conditional".into()),
-        E::CachedValue { .. } => return Err("evaluate_precise: unsupported node CachedValue".into()),
+        E::Conditional { .. } => {
+            return Err("evaluate_precise: unsupported node Conditional".into())
+        }
+        E::CachedValue { .. } => {
+            return Err("evaluate_precise: unsupported node CachedValue".into())
+        }
         E::FourierOptimized { .. } => {
             return Err("evaluate_precise: unsupported node FourierOptimized".into())
         }
@@ -771,14 +873,23 @@ fn enter_node<'a>(
 
 fn unary(args: &[PreciseInterval], name: &str) -> Result<PreciseInterval, String> {
     if args.len() != 1 {
-        return Err(format!("evaluate_precise: {name} expects 1 argument, got {}", args.len()));
+        return Err(format!(
+            "evaluate_precise: {name} expects 1 argument, got {}",
+            args.len()
+        ));
     }
     Ok(args[0].clone())
 }
 
-fn binary(args: &[PreciseInterval], name: &str) -> Result<(PreciseInterval, PreciseInterval), String> {
+fn binary(
+    args: &[PreciseInterval],
+    name: &str,
+) -> Result<(PreciseInterval, PreciseInterval), String> {
     if args.len() != 2 {
-        return Err(format!("evaluate_precise: {name} expects 2 arguments, got {}", args.len()));
+        return Err(format!(
+            "evaluate_precise: {name} expects 2 arguments, got {}",
+            args.len()
+        ));
     }
     Ok((args[0].clone(), args[1].clone()))
 }
@@ -845,14 +956,20 @@ fn apply_function(
         }
         F::Exp => {
             let x = unary(args, "Exp")?;
-            Ok(PreciseInterval { lo: exp_bounds(&x.lo, working_bits)?.lo, hi: exp_bounds(&x.hi, working_bits)?.hi })
+            Ok(PreciseInterval {
+                lo: exp_bounds(&x.lo, working_bits)?.lo,
+                hi: exp_bounds(&x.hi, working_bits)?.hi,
+            })
         }
         F::Ln => {
             let x = unary(args, "Ln")?;
             if x.lo.is_zero() || x.lo.is_negative() {
                 return Err("evaluate_precise: ln of a non-positive interval".into());
             }
-            Ok(PreciseInterval { lo: ln_bounds(&x.lo, working_bits)?.lo, hi: ln_bounds(&x.hi, working_bits)?.hi })
+            Ok(PreciseInterval {
+                lo: ln_bounds(&x.lo, working_bits)?.lo,
+                hi: ln_bounds(&x.hi, working_bits)?.hi,
+            })
         }
         F::Sin => {
             let x = unary(args, "Sin")?;
@@ -871,10 +988,17 @@ fn sqrt_interval(x: &PreciseInterval, working_bits: u32) -> Result<PreciseInterv
     if x.hi.is_negative() {
         return Err("evaluate_precise: sqrt of a negative interval".into());
     }
-    let lo_arg = if x.lo.is_negative() { Rational::zero() } else { x.lo.clone() };
+    let lo_arg = if x.lo.is_negative() {
+        Rational::zero()
+    } else {
+        x.lo.clone()
+    };
     let lo_bounds = sqrt_bounds(&lo_arg, working_bits)?;
     let hi_bounds = sqrt_bounds(&x.hi, working_bits)?;
-    Ok(PreciseInterval { lo: lo_bounds.lo, hi: hi_bounds.hi })
+    Ok(PreciseInterval {
+        lo: lo_bounds.lo,
+        hi: hi_bounds.hi,
+    })
 }
 
 /// `sin` over an interval: 1-Lipschitz, so bound at the midpoint and widen
@@ -882,14 +1006,20 @@ fn sqrt_interval(x: &PreciseInterval, working_bits: u32) -> Result<PreciseInterv
 fn sin_interval(x: &PreciseInterval, working_bits: u32) -> Result<PreciseInterval, String> {
     let (mid, half_width) = midpoint_and_half_width(x)?;
     let core = sin_bounds(&mid, working_bits)?;
-    clamp_unit(PreciseInterval { lo: core.lo.sub(&half_width)?, hi: core.hi.add(&half_width)? })
+    clamp_unit(PreciseInterval {
+        lo: core.lo.sub(&half_width)?,
+        hi: core.hi.add(&half_width)?,
+    })
 }
 
 /// `cos` over an interval: see [`sin_interval`].
 fn cos_interval(x: &PreciseInterval, working_bits: u32) -> Result<PreciseInterval, String> {
     let (mid, half_width) = midpoint_and_half_width(x)?;
     let core = cos_bounds(&mid, working_bits)?;
-    clamp_unit(PreciseInterval { lo: core.lo.sub(&half_width)?, hi: core.hi.add(&half_width)? })
+    clamp_unit(PreciseInterval {
+        lo: core.lo.sub(&half_width)?,
+        hi: core.hi.add(&half_width)?,
+    })
 }
 
 fn midpoint_and_half_width(x: &PreciseInterval) -> Result<(Rational, Rational), String> {
@@ -949,7 +1079,10 @@ fn eval_tree(
     }
 
     if values.len() != 1 {
-        return Err(format!("evaluate_precise: final stack size {} != 1", values.len()));
+        return Err(format!(
+            "evaluate_precise: final stack size {} != 1",
+            values.len()
+        ));
     }
     Ok(values.remove(0))
 }
@@ -1014,12 +1147,26 @@ mod tests {
     fn sqrt5_to_200_bits_brackets_known_value() {
         let iv = evaluate_precise(&sqrt5_expr(), &[], 200).expect("evaluate_precise must compute");
         let known = 5.0_f64.sqrt();
-        assert!(iv.lo.approx_f64() <= known + 1e-6, "lo = {}", iv.lo.approx_f64());
-        assert!(iv.hi.approx_f64() >= known - 1e-6, "hi = {}", iv.hi.approx_f64());
+        assert!(
+            iv.lo.approx_f64() <= known + 1e-6,
+            "lo = {}",
+            iv.lo.approx_f64()
+        );
+        assert!(
+            iv.hi.approx_f64() >= known - 1e-6,
+            "hi = {}",
+            iv.hi.approx_f64()
+        );
         // The exact square: lo^2 <= 5 <= hi^2.
         let five = Rational::from_i64(5).unwrap();
-        assert_ne!(iv.lo.pow_u32(2).unwrap().cmp(&five).unwrap(), Ordering::Greater);
-        assert_ne!(iv.hi.pow_u32(2).unwrap().cmp(&five).unwrap(), Ordering::Less);
+        assert_ne!(
+            iv.lo.pow_u32(2).unwrap().cmp(&five).unwrap(),
+            Ordering::Greater
+        );
+        assert_ne!(
+            iv.hi.pow_u32(2).unwrap().cmp(&five).unwrap(),
+            Ordering::Less
+        );
     }
 
     #[test]
@@ -1030,21 +1177,30 @@ mod tests {
             ArithmaExpression::from_i64(10),
             ArithmaExpression::mul(ArithmaExpression::from_i64(2), five_rad),
         );
-        let radical = ArithmaExpression::div(ArithmaExpression::sqrt(inner), ArithmaExpression::from_i64(4));
+        let radical = ArithmaExpression::div(
+            ArithmaExpression::sqrt(inner),
+            ArithmaExpression::from_i64(4),
+        );
 
         let angle = ArithmaExpression::div(pi_expr(), ArithmaExpression::from_i64(5));
         let sin_expr = ArithmaExpression::sin(angle);
 
         let a = evaluate_precise(&sin_expr, &[], 128).expect("sin must compute");
         let b = evaluate_precise(&radical, &[], 128).expect("radical must compute");
-        assert!(a.overlaps(&b).expect("overlap check must compute"), "sin(pi/5)={a:?} radical={b:?}");
+        assert!(
+            a.overlaps(&b).expect("overlap check must compute"),
+            "sin(pi/5)={a:?} radical={b:?}"
+        );
     }
 
     #[test]
     fn cos_2pi_over_5_matches_radical_form_to_128_bits() {
         // cos(72 degrees) = (sqrt(5) - 1) / 4.
         let radical = ArithmaExpression::div(
-            ArithmaExpression::sub(ArithmaExpression::sqrt(ArithmaExpression::from_i64(5)), ArithmaExpression::from_i64(1)),
+            ArithmaExpression::sub(
+                ArithmaExpression::sqrt(ArithmaExpression::from_i64(5)),
+                ArithmaExpression::from_i64(1),
+            ),
             ArithmaExpression::from_i64(4),
         );
 
@@ -1056,7 +1212,10 @@ mod tests {
 
         let a = evaluate_precise(&cos_expr, &[], 128).expect("cos must compute");
         let b = evaluate_precise(&radical, &[], 128).expect("radical must compute");
-        assert!(a.overlaps(&b).expect("overlap check must compute"), "cos(2pi/5)={a:?} radical={b:?}");
+        assert!(
+            a.overlaps(&b).expect("overlap check must compute"),
+            "cos(2pi/5)={a:?} radical={b:?}"
+        );
     }
 
     #[test]
@@ -1066,7 +1225,8 @@ mod tests {
         // guaranteed non-increasing; widely spaced ones must strictly
         // shrink.
         let w = |bits: u32| {
-            let iv = evaluate_precise(&sqrt5_expr(), &[], bits).expect("evaluate_precise must compute");
+            let iv =
+                evaluate_precise(&sqrt5_expr(), &[], bits).expect("evaluate_precise must compute");
             iv.hi.sub(&iv.lo).unwrap().approx_f64()
         };
         let w64 = w(64);
@@ -1096,7 +1256,8 @@ mod tests {
 
     #[test]
     fn unsupported_function_is_a_named_error() {
-        let expr = ArithmaExpression::func(ArithmaFunction::Gamma, vec![ArithmaExpression::from_i64(2)]);
+        let expr =
+            ArithmaExpression::func(ArithmaFunction::Gamma, vec![ArithmaExpression::from_i64(2)]);
         let err = evaluate_precise(&expr, &[], 64).unwrap_err();
         assert!(err.contains("Gamma"), "unexpected error: {err}");
     }
@@ -1104,7 +1265,10 @@ mod tests {
     #[test]
     fn rational_arithmetic_reduces() {
         let a = Rational::new(ArithmaInteger::from_i64(2), ArithmaInteger::from_i64(4)).unwrap();
-        let b = Rational::from_i64(1).unwrap().div(&Rational::from_i64(2).unwrap()).unwrap();
+        let b = Rational::from_i64(1)
+            .unwrap()
+            .div(&Rational::from_i64(2).unwrap())
+            .unwrap();
         assert_eq!(a.cmp(&b).unwrap(), Ordering::Equal);
     }
 }

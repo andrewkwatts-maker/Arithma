@@ -144,7 +144,11 @@ fn to_le_bytes_signed_is_canonical() {
     let big = i(2).checked_pow(64).expect("2^64 must fold");
     let (negative, bytes) = big.to_le_bytes_signed().expect("2^64 must give bytes");
     assert!(!negative);
-    assert_eq!(*bytes.last().expect("non-empty"), 1, "no trailing zero byte");
+    assert_eq!(
+        *bytes.last().expect("non-empty"),
+        1,
+        "no trailing zero byte"
+    );
 
     assert_eq!(ArithmaInteger::nan().to_le_bytes_signed(), None);
     assert_eq!(ArithmaInteger::infinity().to_le_bytes_signed(), None);

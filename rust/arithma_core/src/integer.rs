@@ -594,7 +594,10 @@ impl ArithmaInternalInteger {
     /// `None` for non-plain integers or a zero divisor.
     pub fn checked_div_floor(&self, other: &Self) -> Option<Self> {
         let (quotient, _) = self.floor_divmod(other)?;
-        debug_assert!(quotient.is_plain_integer(), "floor quotient acquired a special flag");
+        debug_assert!(
+            quotient.is_plain_integer(),
+            "floor quotient acquired a special flag"
+        );
         Some(quotient)
     }
 
@@ -775,7 +778,10 @@ impl ArithmaInteger {
             return None;
         }
         let value = self.value.checked_div_floor(&other.value)?;
-        debug_assert!(value.is_plain_integer(), "floor quotient is not a plain integer");
+        debug_assert!(
+            value.is_plain_integer(),
+            "floor quotient is not a plain integer"
+        );
         Some(Self { value, unit: None })
     }
 
@@ -1146,11 +1152,17 @@ mod tests {
             let original = ArithmaInteger::from_i64(n);
             let (negative, magnitude) = original.to_le_bytes_signed().expect("plain integer");
             let rebuilt = ArithmaInteger::from_le_bytes_signed(negative, &magnitude);
-            assert_eq!(rebuilt.cmp_integer(&original), Some(core::cmp::Ordering::Equal));
+            assert_eq!(
+                rebuilt.cmp_integer(&original),
+                Some(core::cmp::Ordering::Equal)
+            );
         }
         let two_90 = ArithmaInteger::from_u64(2).checked_pow(90).expect("2^90");
         let (negative, magnitude) = two_90.to_le_bytes_signed().expect("plain integer");
         let rebuilt = ArithmaInteger::from_le_bytes_signed(negative, &magnitude);
-        assert_eq!(rebuilt.cmp_integer(&two_90), Some(core::cmp::Ordering::Equal));
+        assert_eq!(
+            rebuilt.cmp_integer(&two_90),
+            Some(core::cmp::Ordering::Equal)
+        );
     }
 }

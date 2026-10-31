@@ -72,15 +72,24 @@ mod tests {
     #[test]
     fn ge_compares_two_expressions() {
         assert_eq!(
-            eval(ge(ArithmaExpression::from_i64(2), ArithmaExpression::from_i64(2))),
+            eval(ge(
+                ArithmaExpression::from_i64(2),
+                ArithmaExpression::from_i64(2)
+            )),
             1.0
         );
         assert_eq!(
-            eval(ge(ArithmaExpression::from_i64(1), ArithmaExpression::from_i64(2))),
+            eval(ge(
+                ArithmaExpression::from_i64(1),
+                ArithmaExpression::from_i64(2)
+            )),
             0.0
         );
         assert_eq!(
-            eval(ge(ArithmaExpression::from_i64(3), ArithmaExpression::from_i64(2))),
+            eval(ge(
+                ArithmaExpression::from_i64(3),
+                ArithmaExpression::from_i64(2)
+            )),
             1.0
         );
     }
@@ -88,15 +97,24 @@ mod tests {
     #[test]
     fn lt_compares_two_expressions() {
         assert_eq!(
-            eval(lt(ArithmaExpression::from_i64(1), ArithmaExpression::from_i64(2))),
+            eval(lt(
+                ArithmaExpression::from_i64(1),
+                ArithmaExpression::from_i64(2)
+            )),
             1.0
         );
         assert_eq!(
-            eval(lt(ArithmaExpression::from_i64(2), ArithmaExpression::from_i64(2))),
+            eval(lt(
+                ArithmaExpression::from_i64(2),
+                ArithmaExpression::from_i64(2)
+            )),
             0.0
         );
         assert_eq!(
-            eval(lt(ArithmaExpression::from_i64(3), ArithmaExpression::from_i64(2))),
+            eval(lt(
+                ArithmaExpression::from_i64(3),
+                ArithmaExpression::from_i64(2)
+            )),
             0.0
         );
     }
