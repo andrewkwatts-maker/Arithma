@@ -21,10 +21,12 @@
 //! - [`sphere`] — `ArithmaSphere` sphere.
 //! - [`intersection`] — closed-form intersection routines.
 //! - [`curve`] — N-dimensional Bézier, Catmull–Rom and piecewise curves.
+//! - [`nurbs`] — rational B-spline curves with symbolic span expressions.
 
 pub mod curve;
 pub mod intersection;
 pub mod line;
+pub mod nurbs;
 pub mod plane;
 pub mod sphere;
 pub mod vector;
@@ -32,6 +34,7 @@ pub mod vector;
 pub use curve::{bezier, catmull_rom, ArithmaCurveError, CatmullRomKind, PiecewiseCurve};
 pub use intersection::{ArithmaIntersection, ArithmaIntersectionResult};
 pub use line::ArithmaLine;
+pub use nurbs::{ArithmaNurbsError, NurbsCurve};
 pub use plane::ArithmaPlane;
 pub use sphere::ArithmaSphere;
 pub use vector::ArithmaVector;
