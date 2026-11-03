@@ -787,6 +787,16 @@ fn arithma_apply_function(
         F::Floor => Ok(args[0].floor()),
         F::Ceil => Ok(args[0].ceil()),
         F::Round => Ok(args[0].round()),
+        F::Min | F::Max => {
+            if args.len() != 2 {
+                return Err(format!("{func:?} expects 2 args"));
+            }
+            Ok(if matches!(func, F::Min) {
+                args[0].min(args[1])
+            } else {
+                args[0].max(args[1])
+            })
+        }
         _ => Err(format!("evaluate: unsupported function {func:?}")),
     }
 }

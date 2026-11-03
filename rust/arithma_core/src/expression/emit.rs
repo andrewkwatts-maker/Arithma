@@ -224,6 +224,10 @@ fn emit_call(f: &ArithmaFunction, kids: &[Frag], target: EmitTarget) -> Result<F
             },
             _ => Frag::atom(format!("sqrt({})", kids[0].text)),
         },
+        (ArithmaFunction::Cbrt, 1) if matches!(target, EmitTarget::Glsl | EmitTarget::Hlsl) => {
+            let x = &kids[0].text;
+            Frag::atom(format!("(sign({x}) * pow(abs({x}), 1.0/3.0))"))
+        }
         // Everything else is a named call: name(arg, ...).
         (other, _) => {
             let name = call_name(other, target)?;
