@@ -52,6 +52,7 @@ pub mod compare;
 pub mod emit;
 pub mod iterative;
 pub mod simplify;
+pub mod term_sum;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -563,6 +564,58 @@ pub struct ArithmaComplexityMetrics {
 // ============================================================================
 // Core traits — the abstraction layer per CLAUDE.md SOLID compliance.
 // ============================================================================
+
+impl ArithmaExpression {
+    /// Every variable name the expression reads, sorted and deduplicated.
+    ///
+    /// Names bound by `Sum`, `Product` and `Limit` are excluded inside their
+    /// bodies; named constants are not variables.
+    pub fn free_symbols(&self) -> std::collections::BTreeSet<String> {
+        let mut out = std::collections::BTreeSet::new();
+        self.collect_free_symbols(&mut out);
+        out
+    }
+
+    fn collect_free_symbols(&self, out: &mut std::collections::BTreeSet<String>) {
+        match self {
+            ArithmaExpression::Variable(name) => {
+                out.insert(name.clone());
+            }
+            ArithmaExpression::Function(_, args) => {
+                args.iter().for_each(|a| a.collect_free_symbols(out));
+            }
+            ArithmaExpression::Sum { variable, start, end, expression }
+            | ArithmaExpression::Product { variable, start, end, expression } => {
+                start.collect_free_symbols(out);
+                end.collect_free_symbols(out);
+                collect_without(expression, variable, out);
+            }
+            ArithmaExpression::Limit { variable, approaching, expression, .. } => {
+                approaching.collect_free_symbols(out);
+                collect_without(expression, variable, out);
+            }
+            ArithmaExpression::Conditional { condition, then_expr, else_expr } => {
+                condition.collect_free_symbols(out);
+                then_expr.collect_free_symbols(out);
+                else_expr.collect_free_symbols(out);
+            }
+            ArithmaExpression::CachedValue { expr, .. }
+            | ArithmaExpression::FourierOptimized { expr, .. } => expr.collect_free_symbols(out),
+            ArithmaExpression::Number(_) | ArithmaExpression::Constant { .. } => {}
+        }
+    }
+}
+
+/// Collect the free symbols of `body` except the bound name `bound`.
+fn collect_without(
+    body: &ArithmaExpression,
+    bound: &str,
+    out: &mut std::collections::BTreeSet<String>,
+) {
+    let mut inner = body.free_symbols();
+    inner.remove(bound);
+    out.extend(inner);
+}
 
 /// Bindings used during numeric evaluation. Maps variable names to f64 values.
 pub type ArithmaBindings = HashMap<String, f64>;
