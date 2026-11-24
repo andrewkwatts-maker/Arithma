@@ -90,6 +90,7 @@ pub mod numerical;
 /// Reading an expression from text.
 pub mod parse;
 pub mod probabilities;
+pub mod rational;
 pub mod si_units;
 pub mod tensor;
 pub mod unit;

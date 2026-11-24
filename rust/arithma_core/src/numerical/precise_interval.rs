@@ -21,11 +21,8 @@
 //!
 //! ## Rational type
 //!
-//! [`Rational`] is a `(numerator, denominator)` pair of plain
-//! [`ArithmaInteger`]s, denominator always positive, reduced by gcd (Euclid's
-//! algorithm on `checked_rem_euclid`, capped). Every arithmetic operation is
-//! exact; nothing is ever rounded to fit a bit width, because an
-//! `ArithmaInteger` has none to fit. The "directed outward rounding" this
+//! [`Rational`] lives in [`crate::rational`] (re-exported here); every
+//! arithmetic operation is exact. The "directed outward rounding" this
 //! module's contract calls for is realised differently for each bounded
 //! operation, never by truncating a rational:
 //! - `sqrt` brackets the root with a Newton iterate and its AM-GM-derived
@@ -60,14 +57,11 @@ use std::cmp::Ordering;
 use crate::expression::ArithmaExpression;
 use crate::function::ArithmaFunction;
 use crate::integer::ArithmaInteger;
+pub use crate::rational::Rational;
 
 /// Hard cap on visited expression nodes, mirroring
 /// [`interval_analysis`](crate::numerical::interval_analysis)'s own bound.
 const ARITHMA_PRECISE_NODE_CAP: usize = 1_048_576;
-
-/// Hard cap on Euclid's-algorithm steps when reducing a [`Rational`]. A gcd
-/// needs `O(log)` steps, so this is generous headroom, never a tight fit.
-const ARITHMA_PRECISE_GCD_CAP: usize = 4_096;
 
 /// Hard cap on Taylor-series terms for `exp`/`ln`/`sin`/`cos`/`atan`.
 const ARITHMA_PRECISE_SERIES_CAP: i64 = 10_000;
@@ -104,205 +98,6 @@ const ARITHMA_PRECISE_MAX_POWER_EXPONENT: i64 = 1024;
 /// the cost of an extra, utterly negligible `iterations * 2^-budget` of
 /// error alongside the already-conservative tail bound.
 const ARITHMA_PRECISE_ROUNDING_GUARD: u32 = 24;
-
-/// An exact rational number: `num / den`, `den` always positive and the
-/// pair always reduced. See the module doc for why this never rounds.
-#[derive(Debug, Clone)]
-pub struct Rational {
-    num: ArithmaInteger,
-    den: ArithmaInteger,
-}
-
-impl Rational {
-    /// The exact value zero.
-    pub fn zero() -> Self {
-        Self {
-            num: ArithmaInteger::zero(),
-            den: ArithmaInteger::from_i64(1),
-        }
-    }
-
-    /// Build `num/den`, reducing by gcd. `den` must be non-zero.
-    pub fn new(num: ArithmaInteger, den: ArithmaInteger) -> Result<Self, String> {
-        if den.is_zero() {
-            return Err("precise_interval: rational with zero denominator".into());
-        }
-        let (mut n, mut d) = (num, den);
-        if d.value.is_negative() {
-            n = negate(&n)?;
-            d = negate(&d)?;
-        }
-        let g = gcd_nonnegative(&n, &d)?;
-        if g.is_zero() {
-            return Ok(Self::zero());
-        }
-        let err = || "precise_interval: reduction failed".to_string();
-        let num_r = n.checked_div_exact(&g).ok_or_else(err)?;
-        let den_r = d.checked_div_exact(&g).ok_or_else(err)?;
-        Ok(Self {
-            num: num_r,
-            den: den_r,
-        })
-    }
-
-    /// Build the exact value `n`.
-    pub fn from_i64(n: i64) -> Result<Self, String> {
-        Self::new(ArithmaInteger::from_i64(n), ArithmaInteger::from_i64(1))
-    }
-
-    /// Build the exact value of a plain `ArithmaInteger`.
-    pub fn from_integer(n: ArithmaInteger) -> Result<Self, String> {
-        Self::new(n, ArithmaInteger::from_i64(1))
-    }
-
-    /// True iff this value is exactly zero.
-    pub fn is_zero(&self) -> bool {
-        self.num.is_zero()
-    }
-
-    /// True iff this value is strictly negative.
-    pub fn is_negative(&self) -> bool {
-        self.num.value.is_negative()
-    }
-
-    /// `|self|`.
-    pub fn abs(&self) -> Result<Self, String> {
-        if self.is_negative() {
-            self.neg()
-        } else {
-            Ok(self.clone())
-        }
-    }
-
-    /// `-self`.
-    pub fn neg(&self) -> Result<Self, String> {
-        Ok(Self {
-            num: negate(&self.num)?,
-            den: self.den.clone(),
-        })
-    }
-
-    /// `self + other`, *unreduced* (see [`Self::raw`]).
-    pub fn add(&self, other: &Self) -> Result<Self, String> {
-        let err = || "precise_interval: addition overflow".to_string();
-        let a = self.num.checked_mul(&other.den).ok_or_else(err)?;
-        let b = other.num.checked_mul(&self.den).ok_or_else(err)?;
-        let n = a.checked_add(&b).ok_or_else(err)?;
-        let d = self.den.checked_mul(&other.den).ok_or_else(err)?;
-        Self::raw(n, d)
-    }
-
-    /// `self - other`, *unreduced*.
-    pub fn sub(&self, other: &Self) -> Result<Self, String> {
-        self.add(&other.neg()?)
-    }
-
-    /// `self * other`, *unreduced*.
-    pub fn mul(&self, other: &Self) -> Result<Self, String> {
-        let err = || "precise_interval: multiplication overflow".to_string();
-        let n = self.num.checked_mul(&other.num).ok_or_else(err)?;
-        let d = self.den.checked_mul(&other.den).ok_or_else(err)?;
-        Self::raw(n, d)
-    }
-
-    /// `self / other`, *unreduced*. `Err` if `other` is zero.
-    pub fn div(&self, other: &Self) -> Result<Self, String> {
-        if other.is_zero() {
-            return Err("precise_interval: division by zero".into());
-        }
-        let err = || "precise_interval: division overflow".to_string();
-        let n = self.num.checked_mul(&other.den).ok_or_else(err)?;
-        let d = self.den.checked_mul(&other.num).ok_or_else(err)?;
-        Self::raw(n, d)
-    }
-
-    /// `self` raised to a non-negative integer power, *unreduced*.
-    pub fn pow_u32(&self, exponent: u32) -> Result<Self, String> {
-        let err = || "precise_interval: power overflow".to_string();
-        let n = self.num.checked_pow(exponent).ok_or_else(err)?;
-        let d = self.den.checked_pow(exponent).ok_or_else(err)?;
-        Self::raw(n, d)
-    }
-
-    /// Build `num/den`, fixing the sign so `den > 0`, but *without*
-    /// reducing by gcd. [`Self::new`] is the always-reduced public
-    /// constructor; the arithmetic combinators above use this instead,
-    /// because they run on essentially every expression-tree node (see
-    /// [`combine_node`]) and reducing every one of them is the single
-    /// largest cost in this module — general Euclidean reduction needs a
-    /// full-width division per step. Skipping it here is sound because
-    /// reduction is never required for *correctness* (every operation here
-    /// is exact and sign-aware regardless of common factors); size is
-    /// instead kept bounded by the explicit outward rounding
-    /// [`combine_node`] and the bounded loops apply after every step (see
-    /// [`ARITHMA_PRECISE_ROUNDING_GUARD`]), which *does* reduce (cheaply,
-    /// against a known power of two: [`reduce_against_pow2`]).
-    fn raw(num: ArithmaInteger, den: ArithmaInteger) -> Result<Self, String> {
-        if den.is_zero() {
-            return Err("precise_interval: rational with zero denominator".into());
-        }
-        if den.value.is_negative() {
-            Ok(Self {
-                num: negate(&num)?,
-                den: negate(&den)?,
-            })
-        } else {
-            Ok(Self { num, den })
-        }
-    }
-
-    /// Exact three-way comparison, by cross-multiplying (both denominators
-    /// are positive, so the sign of the cross product is the sign of the
-    /// difference).
-    pub fn cmp(&self, other: &Self) -> Result<Ordering, String> {
-        let err = || "precise_interval: comparison overflow".to_string();
-        let a = self.num.checked_mul(&other.den).ok_or_else(err)?;
-        let b = other.num.checked_mul(&self.den).ok_or_else(err)?;
-        a.cmp_integer(&b).ok_or_else(err)
-    }
-
-    /// The value rounded to the nearest-ish `f64` (`num / den` after each
-    /// part is converted, so two roundings). `NaN` when either part is out of
-    /// `f64` range; never silently clamped.
-    pub fn to_f64(&self) -> f64 {
-        self.num.to_f64() / self.den.to_f64()
-    }
-}
-
-/// `-v`, for a plain integer. `Err` only if `v` somehow is not plain, which
-/// cannot happen for a value built by this module.
-fn negate(v: &ArithmaInteger) -> Result<ArithmaInteger, String> {
-    v.checked_neg()
-        .ok_or_else(|| "precise_interval: negation failed".to_string())
-}
-
-/// `|v|`, for a plain integer.
-fn abs_integer(v: &ArithmaInteger) -> Result<ArithmaInteger, String> {
-    if v.value.is_negative() {
-        negate(v)
-    } else {
-        Ok(v.clone())
-    }
-}
-
-/// `gcd(|a|, |b|)` via Euclid's algorithm, capped.
-fn gcd_nonnegative(a: &ArithmaInteger, b: &ArithmaInteger) -> Result<ArithmaInteger, String> {
-    let mut x = abs_integer(a)?;
-    let mut y = abs_integer(b)?;
-    let mut guard = 0usize;
-    while !y.is_zero() {
-        guard += 1;
-        if guard > ARITHMA_PRECISE_GCD_CAP {
-            return Err("precise_interval: gcd iteration cap exceeded".into());
-        }
-        let r = x
-            .checked_rem_euclid(&y)
-            .ok_or_else(|| "precise_interval: gcd remainder failed".to_string())?;
-        x = y;
-        y = r;
-    }
-    Ok(x)
-}
 
 fn rational_max(a: &Rational, b: &Rational) -> Result<Rational, String> {
     Ok(if a.cmp(b)? == Ordering::Less {
@@ -374,8 +169,8 @@ fn pow2_recip(bits: u32) -> Result<Rational, String> {
 fn round_down(r: &Rational, bits: u32) -> Result<Rational, String> {
     let err = || "precise_interval: rounding overflow".to_string();
     let scale = pow2(bits)?;
-    let scaled = r.num.checked_mul(&scale).ok_or_else(err)?;
-    let floored = scaled.checked_div_floor(&r.den).ok_or_else(err)?;
+    let scaled = r.numer().checked_mul(&scale).ok_or_else(err)?;
+    let floored = scaled.checked_div_floor(r.denom()).ok_or_else(err)?;
     reduce_against_pow2(floored, bits)
 }
 
@@ -420,10 +215,7 @@ fn reduce_against_pow2(numerator: ArithmaInteger, bits: u32) -> Result<Rational,
     } else {
         numerator.checked_div_exact(&pow2(shift)?).ok_or_else(err)?
     };
-    Ok(Rational {
-        num,
-        den: pow2(bits - shift)?,
-    })
+    Ok(Rational::from_reduced_parts(num, pow2(bits - shift)?))
 }
 
 /// The smallest multiple of `1/2^bits` that is not less than `r`: rounds
@@ -709,7 +501,7 @@ fn ln_reduce(x: &Rational) -> Result<(Rational, i64), String> {
         y = y.mul(&two)?;
     }
     if e != 0 {
-        y = Rational::new(y.num, y.den)?;
+        y = y.reduce()?;
     }
     Ok((y, e))
 }
@@ -979,11 +771,11 @@ fn power_node(args: &[PreciseInterval]) -> Result<PreciseInterval, String> {
         return Err("evaluate_precise: power exponent is not an exact integer".into());
     }
     let point = exponent.lo;
-    if point.den.cmp_integer(&ArithmaInteger::from_i64(1)) != Some(Ordering::Equal) {
+    if point.denom().cmp_integer(&ArithmaInteger::from_i64(1)) != Some(Ordering::Equal) {
         return Err("evaluate_precise: power exponent is not an exact integer".into());
     }
     let k = point
-        .num
+        .numer()
         .to_i64()
         .ok_or_else(|| "evaluate_precise: power exponent out of range".to_string())?;
     if k.unsigned_abs() > ARITHMA_PRECISE_MAX_POWER_EXPONENT as u64 {

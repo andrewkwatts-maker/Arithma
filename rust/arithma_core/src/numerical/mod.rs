@@ -31,7 +31,8 @@ pub mod root_finding;
 pub use critical_points::{ArithmaCriticalPoint, ArithmaCriticalPointKind};
 pub use interval_analysis::ArithmaInterval;
 pub use methods::{solve_with_method, ArithmaNumericalMethod};
-pub use precise_interval::{evaluate_precise, PreciseInterval, Rational};
+pub use crate::rational::Rational;
+pub use precise_interval::{evaluate_precise, PreciseInterval};
 pub use root_finding::{
     find_root_bisection, find_root_newton_raphson, find_root_secant, ArithmaRootFindingConfig,
     ArithmaRootFindingResult,
