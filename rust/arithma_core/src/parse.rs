@@ -505,8 +505,8 @@ pub fn parse_expression(text: &str) -> Result<ArithmaExpression, ParseError> {
 ///
 /// This is [`EmitTarget::Text`], which is the only target that is also an
 /// *input* format. The others are one-way on purpose: LaTeX and MathML are for
-/// display, GLSL and HLSL are for a compiler, and none of them needs to be read
-/// back by this crate.
+/// display, GLSL, HLSL and WGSL are for a shader compiler, Rust, C and Python
+/// are host source, and none of them needs to be read back by this crate.
 pub fn to_text(expr: &ArithmaExpression) -> Result<String, String> {
     expr.emit(EmitTarget::Text)
 }

@@ -50,6 +50,7 @@
 
 pub mod compare;
 pub mod emit;
+mod emit_names;
 pub mod iterative;
 pub mod rational_fold;
 pub mod simplify;
@@ -705,6 +706,14 @@ pub enum EmitTarget {
     Hlsl,
     /// Reverse-Polish notation, the format the EML evaluator expects.
     EmlRpn,
+    /// Rust `f64` source (`f64::sin(x)`, `f64::powf(a, b)`); one-way like the shader targets.
+    Rust,
+    /// C source over `math.h` (`sin(x)`, `pow(a, b)`); one-way like the shader targets.
+    C,
+    /// Python source over `math` (`math.sin(x)`, `a ** b`); one-way like the shader targets.
+    Python,
+    /// WGSL source; names the CPU oracle does not match are refused. One-way like the shader targets.
+    Wgsl,
 }
 
 /// Emit an expression as source code in a target language.

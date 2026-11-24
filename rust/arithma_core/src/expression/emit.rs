@@ -28,6 +28,7 @@
 //! follow-up. Until then, LaTeX changes must be made in both places.
 
 use super::{ArithmaExpression, Emit, EmitTarget};
+use super::emit_names::{check_literal, host_name, maths_name, wgsl_name};
 use crate::function::ArithmaFunction;
 use crate::rational::Rational;
 
@@ -107,9 +108,9 @@ fn emit_leaf(node: &ArithmaExpression, target: EmitTarget) -> Result<Frag, Strin
     Ok(match node {
         ArithmaExpression::Number(i) => {
             let v = i.to_f64();
-            Frag::atom(fmt_number(v, target))
+            Frag::atom(fmt_number(v, target)?)
         }
-        ArithmaExpression::Rational(r) => emit_rational(r, target),
+        ArithmaExpression::Rational(r) => emit_rational(r, target)?,
         ArithmaExpression::Variable(name) => match target {
             EmitTarget::MathMl => Frag::atom(format!("<mi>{name}</mi>")),
             _ => Frag::atom(name.clone()),
@@ -119,13 +120,14 @@ fn emit_leaf(node: &ArithmaExpression, target: EmitTarget) -> Result<Frag, Strin
             cached_value,
             ..
         } => match target {
-            // Shader targets have no symbol table — inline the value or fail
-            // loudly rather than emitting an undefined identifier.
-            EmitTarget::Glsl | EmitTarget::Hlsl => match cached_value {
-                Some(v) => Frag::atom(fmt_number(*v, target)),
+            // Shader and host targets have no symbol table — inline the value
+            // or fail loudly rather than emitting an undefined identifier.
+            EmitTarget::Glsl | EmitTarget::Hlsl | EmitTarget::Rust | EmitTarget::C
+            | EmitTarget::Python | EmitTarget::Wgsl => match cached_value {
+                Some(v) => Frag::atom(fmt_number(*v, target)?),
                 None => {
                     return Err(format!(
-                        "constant `{symbol}` has no cached value; cannot inline it into a shader"
+                        "constant `{symbol}` has no cached value; cannot inline it into {target:?}"
                     ))
                 }
             },
@@ -147,11 +149,11 @@ fn emit_leaf(node: &ArithmaExpression, target: EmitTarget) -> Result<Frag, Strin
 ///
 /// Text writes `n/d` at multiplicative precedence (additive when negative, so
 /// it is bracketed under a product), LaTeX `\frac{n}{d}`, MathML an `<mfrac>`,
-/// RPN `n d /`. The shader targets have no rational type and write the value
-/// as a float literal, like any other number.
-fn emit_rational(r: &Rational, target: EmitTarget) -> Frag {
+/// RPN `n d /`. The shader and host targets have no rational type and write
+/// the value as a float literal, like any other number.
+fn emit_rational(r: &Rational, target: EmitTarget) -> Result<Frag, String> {
     let (n, d) = (trim_number(r.numer().to_f64()), trim_number(r.denom().to_f64()));
-    match target {
+    Ok(match target {
         EmitTarget::Text => Frag {
             prec: if r.is_negative() { PREC_ADD } else { PREC_MUL },
             text: format!("{n}/{d}"),
@@ -161,8 +163,8 @@ fn emit_rational(r: &Rational, target: EmitTarget) -> Frag {
             "<mfrac><mn>{n}</mn><mn>{d}</mn></mfrac>"
         )),
         EmitTarget::EmlRpn => Frag::atom(format!("{n} {d} /")),
-        EmitTarget::Glsl | EmitTarget::Hlsl => Frag::atom(fmt_number(r.to_f64(), target)),
-    }
+        _ => Frag::atom(fmt_number(r.to_f64(), target)?),
+    })
 }
 
 /// Render a function application from already-rendered children.
@@ -230,7 +232,7 @@ fn emit_call(f: &ArithmaFunction, kids: &[Frag], target: EmitTarget) -> Result<F
         },
         (ArithmaFunction::Power, 2) => power_frag(&kids[0], &kids[1], target),
         (ArithmaFunction::Pow(n), 1) => {
-            let e = Frag::atom(fmt_number(n.to_f64(), target));
+            let e = Frag::atom(fmt_number(n.to_f64(), target)?);
             power_frag(&kids[0], &e, target)
         }
         (ArithmaFunction::Sqrt, 1) => match target {
@@ -246,9 +248,12 @@ fn emit_call(f: &ArithmaFunction, kids: &[Frag], target: EmitTarget) -> Result<F
                 text: format!("{} sqrt", kids[0].text),
                 prec: PREC_ATOM,
             },
+            EmitTarget::Rust | EmitTarget::C | EmitTarget::Python => {
+                Frag::atom(format!("{}({})", host_name("sqrt", target)?, kids[0].text))
+            }
             _ => Frag::atom(format!("sqrt({})", kids[0].text)),
         },
-        (ArithmaFunction::Cbrt, 1) if matches!(target, EmitTarget::Glsl | EmitTarget::Hlsl) => {
+        (ArithmaFunction::Cbrt, 1) if matches!(target, EmitTarget::Glsl | EmitTarget::Hlsl | EmitTarget::Wgsl) => {
             let x = &kids[0].text;
             Frag::atom(format!("(sign({x}) * pow(abs({x}), 1.0/3.0))"))
         }
@@ -319,8 +324,21 @@ fn power_frag(base: &Frag, exp: &Frag, target: EmitTarget) -> Frag {
         // GLSL and HLSL have no `^` operator for floats — it is bitwise xor.
         // Emitting `pow()` is the difference between a shader that compiles
         // and one that silently does the wrong thing.
-        EmitTarget::Glsl | EmitTarget::Hlsl => {
+        EmitTarget::Glsl | EmitTarget::Hlsl | EmitTarget::C | EmitTarget::Wgsl => {
             Frag::atom(format!("pow({}, {})", base.text, exp.text))
+        }
+        EmitTarget::Rust => Frag::atom(format!("f64::powf({}, {})", base.text, exp.text)),
+        // `**` binds tighter than a unary minus on its left, so a negative
+        // literal base needs brackets even though it is an atom.
+        EmitTarget::Python => {
+            let base = match base.text.starts_with('-') {
+                true => format!("({})", base.text),
+                false => base.paren_if(PREC_POW + 1),
+            };
+            Frag {
+                text: format!("{base} ** {}", exp.paren_if(PREC_POW + 1)),
+                prec: PREC_POW,
+            }
         }
         EmitTarget::Text => Frag {
             text: format!(
@@ -349,43 +367,15 @@ fn mathml_infix(kids: &[Frag], op: &str) -> Frag {
 
 /// Function name for the target dialect.
 fn call_name(f: &ArithmaFunction, target: EmitTarget) -> Result<String, String> {
-    let name = match f {
-        ArithmaFunction::Sin => "sin",
-        ArithmaFunction::Cos => "cos",
-        ArithmaFunction::Tan => "tan",
-        ArithmaFunction::Exp => "exp",
-        ArithmaFunction::Ln => "ln",
-        ArithmaFunction::Log10 => "log10",
-        ArithmaFunction::Log2 => "log2",
-        ArithmaFunction::Abs => "abs",
-        ArithmaFunction::Floor => "floor",
-        ArithmaFunction::Ceil => "ceil",
-        ArithmaFunction::Min => "min",
-        ArithmaFunction::Max => "max",
-        // The inverse, hyperbolic and rounding families. These were missing,
-        // so every one of them PARSED and then could not be written back --
-        // `parse::FUNCTIONS` accepted 22 names and this table spelled 12. The
-        // symmetry test in `parse` now fails if the two ever drift again.
-        ArithmaFunction::Asin => "asin",
-        ArithmaFunction::Acos => "acos",
-        ArithmaFunction::Atan => "atan",
-        ArithmaFunction::Atan2 => "atan2",
-        ArithmaFunction::Sinh => "sinh",
-        ArithmaFunction::Cosh => "cosh",
-        ArithmaFunction::Tanh => "tanh",
-        ArithmaFunction::Asinh => "asinh",
-        ArithmaFunction::Acosh => "acosh",
-        ArithmaFunction::Atanh => "atanh",
-        ArithmaFunction::Cbrt => "cbrt",
-        ArithmaFunction::Log => "log",
-        ArithmaFunction::Round => "round",
-        ArithmaFunction::Sign => "sign",
-        other => {
-            return Err(format!(
-                "no {target:?} spelling for `{other:?}`; add it to call_name"
-            ))
-        }
-    };
+    let name = maths_name(f).ok_or_else(|| {
+        format!("no {target:?} spelling for `{f:?}`; add it to call_name")
+    })?;
+
+    match target {
+        EmitTarget::Rust | EmitTarget::C | EmitTarget::Python => return host_name(name, target),
+        EmitTarget::Wgsl => return wgsl_name(name),
+        _ => {}
+    }
 
     // Shader dialects diverge from the maths spelling in a couple of places.
     Ok(match (target, name) {
@@ -416,12 +406,19 @@ fn latex_symbol(symbol: &str) -> String {
     }
 }
 
-/// Format a number for the target.
-fn fmt_number(v: f64, target: EmitTarget) -> String {
-    match target {
-        // GLSL/HLSL float literals need a decimal point, or `2` is an int and
-        // `2 / 3` becomes integer division.
-        EmitTarget::Glsl | EmitTarget::Hlsl => {
+/// Format a number for the target; the host and WGSL targets refuse a value
+/// they cannot hold (see `check_literal`).
+fn fmt_number(v: f64, target: EmitTarget) -> Result<String, String> {
+    check_literal(v, target)?;
+    Ok(match target {
+        // Float literals need a decimal point, or `2` is an int and `2 / 3`
+        // becomes integer division.
+        EmitTarget::Glsl
+        | EmitTarget::Hlsl
+        | EmitTarget::Rust
+        | EmitTarget::C
+        | EmitTarget::Python
+        | EmitTarget::Wgsl => {
             if v.fract() == 0.0 && v.is_finite() {
                 format!("{v:.1}")
             } else {
@@ -430,7 +427,7 @@ fn fmt_number(v: f64, target: EmitTarget) -> String {
         }
         EmitTarget::MathMl => format!("<mn>{}</mn>", trim_number(v)),
         _ => trim_number(v),
-    }
+    })
 }
 
 fn trim_number(v: f64) -> String {
