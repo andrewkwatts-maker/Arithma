@@ -24,9 +24,6 @@ const FOURIER_GATE: f64 = 1e-9;
 const PRECISE_BITS: u32 = 64;
 /// Points are `k / 16`; the brief's range is `-40..=40`.
 const POINT_K_ALL: (i64, i64) = (-40, 40);
-/// `evaluate_precise` computes `ln` by an atanh series whose tail test needs
-/// the argument below about 5.83, so `ln(1+x^2)` stops at `|x| <= 2`.
-const POINT_K_LN: (i64, i64) = (-32, 32);
 /// `sqrt(2+x)` is real only for `x >= -2`.
 const POINT_K_SQRT: (i64, i64) = (-32, 40);
 const POINT_DENOMINATOR: i64 = 16;
@@ -38,7 +35,7 @@ const SAMPLES: &[(&str, bool, (i64, i64))] = &[
     ("sin(x)", false, POINT_K_ALL),
     ("cos(3*x)", false, POINT_K_ALL),
     ("exp(x)", false, POINT_K_ALL),
-    ("ln(1+x^2)", false, POINT_K_LN),
+    ("ln(1+x^2)", false, POINT_K_ALL),
     ("sqrt(2+x)", false, POINT_K_SQRT),
     ("x^3-2*x+1", false, POINT_K_ALL),
     ("(x^2+1)/(x^2+2)", false, POINT_K_ALL),
@@ -201,6 +198,78 @@ fn table_prints_every_function() {
             .find(|l| l.contains(&format!("`{text}`")))
             .unwrap_or_else(|| panic!("row missing for {text}"));
         assert_eq!(row.contains("n/a: not periodic on range"), !periodic, "{text}");
+    }
+}
+
+/// `num / den` for small integers.
+fn ratio(num: i64, den: i64) -> Rational {
+    Rational::new(ArithmaInteger::from_i64(num), ArithmaInteger::from_i64(den)).unwrap()
+}
+
+/// `2^e` for `e` of either sign; built in `2^500` chunks, because `pow_u32`
+/// squares its base past the 4,096-bit cap for exponents near 4000.
+fn pow2_rational(e: i32) -> Rational {
+    const CHUNK: u32 = 500;
+    let two = Rational::from_i64(2).unwrap();
+    let mut left = e.unsigned_abs();
+    let mut p = Rational::from_i64(1).unwrap();
+    while left > 0 {
+        let step = left.min(CHUNK);
+        p = p.mul(&two.pow_u32(step).unwrap()).unwrap();
+        left -= step;
+    }
+    if e >= 0 {
+        p
+    } else {
+        Rational::from_i64(1).unwrap().div(&p).unwrap()
+    }
+}
+
+/// Cases for the ln domain test: the argument and its `f64::ln`, where `f64`
+/// is finite (`2^±4000` is not, so those use `±4000 * LN_2`).
+fn ln_domain_cases() -> Vec<(Rational, f64)> {
+    vec![
+        (ratio(1, 1000), (1.0_f64 / 1000.0).ln()),
+        (ratio(1, 10), 0.1_f64.ln()),
+        (ratio(1, 8), 0.125_f64.ln()),
+        (ratio(6, 1), 6.0_f64.ln()),
+        (ratio(100, 1), 100.0_f64.ln()),
+        (ratio(1_000_000, 1), 1.0e6_f64.ln()),
+        (pow2_rational(-4000), -4000.0 * std::f64::consts::LN_2),
+        (pow2_rational(4000), 4000.0 * std::f64::consts::LN_2),
+    ]
+}
+
+/// The `f64` midpoint is itself rounded twice (`num / den`), so its floor is
+/// about `2^-52`; the exact enclosure width is gated at the requested `2^-60`.
+const LN_MID_REL_GATE: f64 = 1.0 / (1u64 << 50) as f64;
+
+#[test]
+fn ln_covers_every_positive_rational() {
+    let expr = parse("ln(x)");
+    let width_gate = pow2_rational(-60);
+    for (x, want) in ln_domain_cases() {
+        let iv = evaluate_precise(&expr, &[("x", x.clone())], PRECISE_BITS)
+            .unwrap_or_else(|e| panic!("ln({}): {e}", x.to_f64()));
+        let got = iv.mid_f64();
+        let rel = (got - want).abs() / want.abs();
+        assert!(rel <= LN_MID_REL_GATE, "ln({}): rel {rel:.3e}", x.to_f64());
+        let width = iv.hi.sub(&iv.lo).unwrap();
+        assert!(
+            width.cmp(&width_gate).unwrap() != std::cmp::Ordering::Greater,
+            "ln({}): enclosure wider than 2^-60",
+            x.to_f64()
+        );
+    }
+}
+
+#[test]
+fn ln_reduction_cap_is_named() {
+    let expr = parse("ln(x)");
+    for bad in [0, -1] {
+        let err = evaluate_precise(&expr, &[("x", ratio(bad, 1))], PRECISE_BITS)
+            .expect_err("ln of a non-positive value must be refused");
+        assert!(err.contains("non-positive"), "unnamed error: {err}");
     }
 }
 

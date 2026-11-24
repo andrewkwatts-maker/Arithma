@@ -72,6 +72,13 @@ const ARITHMA_PRECISE_GCD_CAP: usize = 4_096;
 /// Hard cap on Taylor-series terms for `exp`/`ln`/`sin`/`cos`/`atan`.
 const ARITHMA_PRECISE_SERIES_CAP: i64 = 10_000;
 
+/// Hard cap on halvings or doublings in `ln` argument reduction. Any finite
+/// [`Rational`] lies within `2^±8192` (the 4,096-bit [`ArithmaInteger`] cap).
+const ARITHMA_PRECISE_LN_REDUCTION_CAP: i64 = 8_200;
+
+/// Extra bits for the `ln(2)` series, covering `|e| <= 8200` (14 bits).
+const ARITHMA_PRECISE_LN_GUARD_BITS: u32 = 14;
+
 /// Hard cap on Newton iterations for `sqrt`. Quadratic convergence means
 /// this is reached in practice after a few dozen steps at most.
 const ARITHMA_PRECISE_NEWTON_CAP: usize = 4_096;
@@ -677,15 +684,61 @@ fn exp_bounds(x: &Rational, target_bits: u32) -> Result<PreciseInterval, String>
     }
 }
 
-/// `ln(x)` for `x > 0`, via `ln(x) = 2*atanh((x-1)/(x+1))`. Converges for
-/// every `x > 0`, but only quickly (within this module's "halve each step"
-/// tail-bound test) while `|t| = |(x-1)/(x+1)|` is not too close to 1 —
-/// i.e. `x` not too far from 1. Errors with the series cap rather than
-/// looping unboundedly outside that range.
+/// Splits `x > 0` as `y * 2^e` with `3/4 <= y < 3/2`, by halving or doubling.
+/// `e = 0` when `x` is already in range, so there is no cancellation near
+/// `x = 1`. Errors by name past [`ARITHMA_PRECISE_LN_REDUCTION_CAP`] steps.
+fn ln_reduce(x: &Rational) -> Result<(Rational, i64), String> {
+    let three_halves = Rational::new(ArithmaInteger::from_i64(3), ArithmaInteger::from_i64(2))?;
+    let three_quarters = Rational::new(ArithmaInteger::from_i64(3), ArithmaInteger::from_i64(4))?;
+    let half = Rational::new(ArithmaInteger::from_i64(1), ArithmaInteger::from_i64(2))?;
+    let two = Rational::from_i64(2)?;
+    let mut y = x.clone();
+    let mut e: i64 = 0;
+    while y.cmp(&three_halves)? != Ordering::Less {
+        e += 1;
+        if e > ARITHMA_PRECISE_LN_REDUCTION_CAP {
+            return Err("evaluate_precise: ln argument reduction cap exceeded".into());
+        }
+        y = y.mul(&half)?;
+    }
+    while y.cmp(&three_quarters)? == Ordering::Less {
+        e -= 1;
+        if -e > ARITHMA_PRECISE_LN_REDUCTION_CAP {
+            return Err("evaluate_precise: ln argument reduction cap exceeded".into());
+        }
+        y = y.mul(&two)?;
+    }
+    if e != 0 {
+        y = Rational::new(y.num, y.den)?;
+    }
+    Ok((y, e))
+}
+
+/// `ln(x)` for `x > 0`, via argument reduction `x = y * 2^e` with
+/// `y` in `[3/4, 3/2)`: `ln(x) = ln(y) + e*ln(2)`. `ln(2)` is summed with
+/// [`ARITHMA_PRECISE_LN_GUARD_BITS`] extra bits to cover `|e| <= 8200`.
 fn ln_bounds(x: &Rational, target_bits: u32) -> Result<PreciseInterval, String> {
     if x.is_zero() || x.is_negative() {
         return Err("evaluate_precise: ln of a non-positive value".into());
     }
+    let (y, e) = ln_reduce(x)?;
+    let base = ln_series(&y, target_bits)?;
+    if e == 0 {
+        return Ok(base);
+    }
+    let two = Rational::from_i64(2)?;
+    let ln2 = ln_series(
+        &two,
+        target_bits.saturating_add(ARITHMA_PRECISE_LN_GUARD_BITS),
+    )?;
+    let scaled = ln2.mul(&PreciseInterval::point(Rational::from_i64(e)?))?;
+    base.add(&scaled)
+}
+
+/// `ln(y)` by `2*atanh((y-1)/(y+1))`. Converges within this module's
+/// "halve each step" tail-bound test for `|t| = |(y-1)/(y+1)| < 0.17`, which
+/// [`ln_reduce`] guarantees (`|t| <= 1/5` on `[3/4, 3/2)`).
+fn ln_series(x: &Rational, target_bits: u32) -> Result<PreciseInterval, String> {
     let budget = target_bits.saturating_add(ARITHMA_PRECISE_ROUNDING_GUARD);
     let one = Rational::from_i64(1)?;
     let t = x.sub(&one)?.div(&x.add(&one)?)?;
