@@ -70,7 +70,7 @@
 
 use core::cmp::Ordering;
 
-use crate::expression::{ArithmaExpression, SimplificationConfig};
+use crate::expression::{rational_fold, ArithmaExpression, SimplificationConfig};
 use crate::function::ArithmaFunction;
 use crate::integer::ArithmaInteger;
 
@@ -137,6 +137,7 @@ pub const MAX_DEPTH: usize = 1024;
 fn child_count(expr: &ArithmaExpression) -> usize {
     match expr {
         ArithmaExpression::Number(_)
+        | ArithmaExpression::Rational(_)
         | ArithmaExpression::Constant { .. }
         | ArithmaExpression::Variable(_) => 0,
         ArithmaExpression::Function(_, args) => args.len(),
@@ -170,6 +171,7 @@ fn take_children(expr: &mut ArithmaExpression) -> Vec<ArithmaExpression> {
     let stub = ArithmaExpression::zero;
     match expr {
         ArithmaExpression::Number(_)
+        | ArithmaExpression::Rational(_)
         | ArithmaExpression::Constant { .. }
         | ArithmaExpression::Variable(_) => Vec::new(),
         ArithmaExpression::Function(_, args) => core::mem::take(args),
@@ -219,6 +221,7 @@ fn put_children(expr: &mut ArithmaExpression, kids: Vec<ArithmaExpression>) {
     let mut it = kids.into_iter();
     match expr {
         ArithmaExpression::Number(_)
+        | ArithmaExpression::Rational(_)
         | ArithmaExpression::Constant { .. }
         | ArithmaExpression::Variable(_) => {}
         ArithmaExpression::Function(_, args) => {
@@ -351,6 +354,7 @@ fn same_node(a: &ArithmaExpression, b: &ArithmaExpression) -> bool {
     use ArithmaExpression as E;
     match (a, b) {
         (E::Number(x), E::Number(y)) => x.value == y.value && x.unit == y.unit,
+        (E::Rational(x), E::Rational(y)) => x == y,
         (E::Variable(x), E::Variable(y)) => x == y,
         (E::Constant { symbol: x, .. }, E::Constant { symbol: y, .. }) => x == y,
         (E::Function(f, _), E::Function(g, _)) => same_function(f, g),
@@ -455,15 +459,16 @@ fn structural_eq(a: &ArithmaExpression, b: &ArithmaExpression) -> bool {
 fn kind_rank(expr: &ArithmaExpression) -> u8 {
     match expr {
         ArithmaExpression::Number(_) => 0,
-        ArithmaExpression::Constant { .. } => 1,
-        ArithmaExpression::Function(..) => 2,
-        ArithmaExpression::Sum { .. } => 3,
-        ArithmaExpression::Product { .. } => 4,
-        ArithmaExpression::Limit { .. } => 5,
-        ArithmaExpression::Conditional { .. } => 6,
-        ArithmaExpression::CachedValue { .. } => 7,
-        ArithmaExpression::FourierOptimized { .. } => 8,
-        ArithmaExpression::Variable(_) => 9,
+        ArithmaExpression::Rational(_) => 1,
+        ArithmaExpression::Constant { .. } => 2,
+        ArithmaExpression::Function(..) => 3,
+        ArithmaExpression::Sum { .. } => 4,
+        ArithmaExpression::Product { .. } => 5,
+        ArithmaExpression::Limit { .. } => 6,
+        ArithmaExpression::Conditional { .. } => 7,
+        ArithmaExpression::CachedValue { .. } => 8,
+        ArithmaExpression::FourierOptimized { .. } => 9,
+        ArithmaExpression::Variable(_) => 10,
     }
 }
 
@@ -668,6 +673,7 @@ fn compare_shallow(a: &ArithmaExpression, b: &ArithmaExpression) -> Ordering {
     // no distinguishing data of their own.
     let by_data = match (a, b) {
         (E::Number(x), E::Number(y)) => compare_numbers(x, y),
+        (E::Rational(x), E::Rational(y)) => x.cmp(y).unwrap_or(Ordering::Equal),
         (E::Variable(x), E::Variable(y)) => x.cmp(y),
         (E::Constant { symbol: x, .. }, E::Constant { symbol: y, .. }) => x.cmp(y),
         (E::Function(f, _), E::Function(g, _)) => compare_functions(f, g),
@@ -965,6 +971,10 @@ impl ArithmaIterativeSimplifier {
             ArithmaExpression::Function(f, _) => f.clone(),
             _ => return false,
         };
+        if let Some(folded) = rational_fold::fold(node) {
+            *node = folded;
+            return true;
+        }
         match func {
             ArithmaFunction::Add => Self::rewrite_sum(node),
             ArithmaFunction::Subtract => Self::rewrite_difference(node),
@@ -1541,6 +1551,7 @@ impl ArithmaIterativeSimplifier {
     fn is_finite_shape(expr: &ArithmaExpression) -> bool {
         match expr {
             ArithmaExpression::Number(n) => n.value.is_plain_integer(),
+            ArithmaExpression::Rational(_) => true,
             ArithmaExpression::Variable(_) => true,
             ArithmaExpression::Constant { .. } => true,
             _ => false,
@@ -1698,6 +1709,7 @@ fn child_at(expr: &ArithmaExpression, index: usize) -> Option<&ArithmaExpression
     debug_assert!(index < MAX_NODES, "child index is implausibly large");
     match expr {
         ArithmaExpression::Number(_)
+        | ArithmaExpression::Rational(_)
         | ArithmaExpression::Constant { .. }
         | ArithmaExpression::Variable(_) => None,
         ArithmaExpression::Function(_, args) => args.get(index),
@@ -1961,8 +1973,9 @@ mod tests {
         let mut inexact = ArithmaExpression::div(n(7), n(2));
         let _ = simplify_iterative(&mut inexact, &cfg());
         assert!(
-            matches!(inexact, ArithmaExpression::Function(..)),
-            "7/2 must stay a quotient rather than round to 3 or 4"
+            matches!(&inexact, ArithmaExpression::Rational(r) if r.numer().to_i64() == Some(7)
+                && r.denom().to_i64() == Some(2)),
+            "7/2 must become the exact leaf 7/2 rather than round to 3 or 4"
         );
 
         // Division by zero is an evaluation error, not something to rewrite.

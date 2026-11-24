@@ -700,6 +700,7 @@ fn enter_node<'a>(
     use ArithmaExpression as E;
     match node {
         E::Number(n) => values.push(PreciseInterval::point(Rational::from_integer(n.clone())?)),
+        E::Rational(r) => values.push(PreciseInterval::point(r.clone())),
         E::Constant { symbol, .. } => values.push(constant_interval(symbol, working_bits)?),
         E::Variable(name) => values.push(lookup_binding(name, bindings)?),
         E::Function(func, args) => {

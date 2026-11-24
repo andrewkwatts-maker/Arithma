@@ -59,6 +59,7 @@ use crate::expression::iterative::{simplify_iterative, MAX_ITERATION_CEILING};
 use crate::expression::{ArithmaBindings, ArithmaExpression, Evaluable, SimplificationConfig};
 use crate::function::ArithmaFunction;
 use crate::integer::{flag, ArithmaInteger, ArithmaInternalInteger};
+use crate::rational::Rational;
 use crate::variable::{ArithmaVariable, ArithmaVariableValue};
 
 // ============================================================================
@@ -115,6 +116,7 @@ fn expression_to_latex(expr: &ArithmaExpression) -> String {
     fn precedence(expr: &ArithmaExpression) -> u8 {
         match expr {
             ArithmaExpression::Number(_)
+            | ArithmaExpression::Rational(_)
             | ArithmaExpression::Constant { .. }
             | ArithmaExpression::Variable(_) => 100,
             ArithmaExpression::Function(func, _) => match func {
@@ -160,6 +162,7 @@ fn expression_to_latex(expr: &ArithmaExpression) -> String {
 
     match expr {
         ArithmaExpression::Number(n) => fmt_number(n),
+        ArithmaExpression::Rational(r) => rational_to_latex(r),
         ArithmaExpression::Constant { symbol, .. } => match symbol.as_str() {
             "pi" => "\\pi".to_string(),
             "e" => "e".to_string(),
@@ -341,6 +344,14 @@ fn unary_function(name: &str, args: &[ArithmaExpression]) -> String {
     } else {
         format!("{name}\\left(?\\right)")
     }
+}
+
+/// LaTeX for an exact rational: `\frac{numerator}{denominator}`.
+fn rational_to_latex(r: &Rational) -> String {
+    let part = |n: &ArithmaInteger| {
+        arithma_integer_to_decimal_string(n).unwrap_or_else(|| format!("{}", n.to_f64()))
+    };
+    format!("\\frac{{{}}}{{{}}}", part(r.numer()), part(r.denom()))
 }
 
 // ============================================================================
@@ -595,6 +606,18 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmaExpression) -> PyResul
             );
             Ok(lst.into())
         }
+        ArithmaExpression::Rational(r) => {
+            let (num, den) = (r.numer(), r.denom());
+            let lst = PyList::new_bound(
+                py,
+                &[
+                    "rat".into_py(py),
+                    integer_to_compact_string(num).into_py(py),
+                    integer_to_compact_string(den).into_py(py),
+                ],
+            );
+            Ok(lst.into())
+        }
         ArithmaExpression::Variable(name) => {
             let lst = PyList::new_bound(py, &["var".into_py(py), name.clone().into_py(py)]);
             Ok(lst.into())
@@ -689,6 +712,24 @@ fn expression_to_compact_py(py: Python<'_>, expr: &ArithmaExpression) -> PyResul
     }
 }
 
+/// Decode a `["rat", numerator, denominator]` compact node. The value is
+/// reduced and a zero denominator is refused.
+fn rational_from_compact_py(lst: &Bound<'_, PyList>) -> PyResult<ArithmaExpression> {
+    if lst.len() != 3 {
+        return Err(PyValueError::new_err(
+            "Expression.from_compact: 'rat' node expects 3 elements",
+        ));
+    }
+    let part = |i: usize| -> PyResult<ArithmaInteger> {
+        let s: String = lst.get_item(i)?.extract()?;
+        integer_from_compact_string(&s).map_err(PyValueError::new_err)
+    };
+    let value = Rational::new(part(1)?, part(2)?).map_err(PyValueError::new_err)?;
+    crate::expression::rational_fold::leaf(value).ok_or_else(|| {
+        PyValueError::new_err("Expression.from_compact: 'rat' node is not representable")
+    })
+}
+
 /// Inverse of [`expression_to_compact_py`]. Walks a Python list/tuple matching
 /// the compact schema and reconstructs the corresponding `ArithmaExpression`.
 fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmaExpression> {
@@ -721,6 +762,7 @@ fn expression_from_compact_py(blob: &Bound<'_, PyAny>) -> PyResult<ArithmaExpres
             let n = integer_from_compact_string(&s).map_err(PyValueError::new_err)?;
             Ok(ArithmaExpression::Number(n))
         }
+        "rat" => rational_from_compact_py(&lst),
         "var" => {
             if lst.len() != 2 {
                 return Err(PyValueError::new_err(
@@ -1179,6 +1221,7 @@ impl Expression {
             }
             // Leaf nodes have no children.
             ArithmaExpression::Number(_)
+            | ArithmaExpression::Rational(_)
             | ArithmaExpression::Constant { .. }
             | ArithmaExpression::Variable(_) => Vec::new(),
         }
@@ -1233,6 +1276,7 @@ impl Expression {
     fn kind(&self) -> String {
         match &self.inner {
             ArithmaExpression::Number(_) => "number".into(),
+            ArithmaExpression::Rational(_) => "rational".into(),
             ArithmaExpression::Variable(_) => "variable".into(),
             ArithmaExpression::Constant { .. } => "constant".into(),
             ArithmaExpression::Function(f, _) => format!("function:{f:?}"),

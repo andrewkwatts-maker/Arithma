@@ -559,6 +559,7 @@ pub fn evaluate_interval(
         match frame {
             Frame::Enter(node) => match node {
                 ArithmaExpression::Number(n) => values.push(ArithmaInterval::point(n.to_f64())),
+                ArithmaExpression::Rational(r) => values.push(ArithmaInterval::point(r.to_f64())),
                 ArithmaExpression::Constant {
                     cached_value,
                     symbol,

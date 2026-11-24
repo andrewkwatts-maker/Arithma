@@ -51,6 +51,7 @@
 pub mod compare;
 pub mod emit;
 pub mod iterative;
+pub mod rational_fold;
 pub mod simplify;
 pub mod term_sum;
 
@@ -59,6 +60,7 @@ use std::collections::HashMap;
 
 use crate::function::ArithmaFunction;
 use crate::integer::ArithmaInteger;
+use crate::rational::Rational;
 
 /// SI unit prefixes spanning yocto (10⁻²⁴) through yotta (10²⁴).
 ///
@@ -161,8 +163,12 @@ impl ArithmaSIPrefix {
 /// enum stays Sized.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ArithmaExpression {
-    /// Exact integer or rational literal.
+    /// Exact integer literal.
     Number(ArithmaInteger),
+
+    /// Exact rational literal: always reduced, positive denominator, never an
+    /// integer (an integer result is a [`Number`](Self::Number)).
+    Rational(Rational),
 
     /// Named symbolic constant (π, e, c, h, ...).
     Constant {
@@ -516,7 +522,7 @@ impl ArithmaExpression {
     /// Returns true if the expression contains no free variables.
     pub fn is_constant(&self) -> bool {
         match self {
-            ArithmaExpression::Number(_) => true,
+            ArithmaExpression::Number(_) | ArithmaExpression::Rational(_) => true,
             ArithmaExpression::Constant { .. } => true,
             ArithmaExpression::Variable(_) => false,
             ArithmaExpression::Function(_, args) => args.iter().all(|a| a.is_constant()),
@@ -601,7 +607,9 @@ impl ArithmaExpression {
             }
             ArithmaExpression::CachedValue { expr, .. }
             | ArithmaExpression::FourierOptimized { expr, .. } => expr.collect_free_symbols(out),
-            ArithmaExpression::Number(_) | ArithmaExpression::Constant { .. } => {}
+            ArithmaExpression::Number(_)
+            | ArithmaExpression::Rational(_)
+            | ArithmaExpression::Constant { .. } => {}
         }
     }
 }
@@ -822,6 +830,7 @@ impl Evaluable for ArithmaExpression {
             match frame {
                 Frame::Enter(node) => match node {
                     ArithmaExpression::Number(n) => values.push(n.to_f64()),
+                    ArithmaExpression::Rational(r) => values.push(r.to_f64()),
                     ArithmaExpression::Constant {
                         cached_value,
                         symbol,

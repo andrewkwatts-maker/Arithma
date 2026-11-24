@@ -29,6 +29,7 @@
 
 use super::{ArithmaExpression, Emit, EmitTarget};
 use crate::function::ArithmaFunction;
+use crate::rational::Rational;
 
 /// Operator precedence. Higher binds tighter.
 const PREC_ADD: u8 = 1;
@@ -108,6 +109,7 @@ fn emit_leaf(node: &ArithmaExpression, target: EmitTarget) -> Result<Frag, Strin
             let v = i.to_f64();
             Frag::atom(fmt_number(v, target))
         }
+        ArithmaExpression::Rational(r) => emit_rational(r, target),
         ArithmaExpression::Variable(name) => match target {
             EmitTarget::MathMl => Frag::atom(format!("<mi>{name}</mi>")),
             _ => Frag::atom(name.clone()),
@@ -139,6 +141,28 @@ fn emit_leaf(node: &ArithmaExpression, target: EmitTarget) -> Result<Frag, Strin
             ))
         }
     })
+}
+
+/// Render an exact rational leaf for `target`.
+///
+/// Text writes `n/d` at multiplicative precedence (additive when negative, so
+/// it is bracketed under a product), LaTeX `\frac{n}{d}`, MathML an `<mfrac>`,
+/// RPN `n d /`. The shader targets have no rational type and write the value
+/// as a float literal, like any other number.
+fn emit_rational(r: &Rational, target: EmitTarget) -> Frag {
+    let (n, d) = (trim_number(r.numer().to_f64()), trim_number(r.denom().to_f64()));
+    match target {
+        EmitTarget::Text => Frag {
+            prec: if r.is_negative() { PREC_ADD } else { PREC_MUL },
+            text: format!("{n}/{d}"),
+        },
+        EmitTarget::Latex => Frag::atom(format!("\\frac{{{n}}}{{{d}}}")),
+        EmitTarget::MathMl => Frag::atom(format!(
+            "<mfrac><mn>{n}</mn><mn>{d}</mn></mfrac>"
+        )),
+        EmitTarget::EmlRpn => Frag::atom(format!("{n} {d} /")),
+        EmitTarget::Glsl | EmitTarget::Hlsl => Frag::atom(fmt_number(r.to_f64(), target)),
+    }
 }
 
 /// Render a function application from already-rendered children.
@@ -420,6 +444,7 @@ fn trim_number(v: f64) -> String {
 fn node_kind(e: &ArithmaExpression) -> &'static str {
     match e {
         ArithmaExpression::Number(_) => "Number",
+        ArithmaExpression::Rational(_) => "Rational",
         ArithmaExpression::Variable(_) => "Variable",
         ArithmaExpression::Constant { .. } => "Constant",
         ArithmaExpression::Function(_, _) => "Function",

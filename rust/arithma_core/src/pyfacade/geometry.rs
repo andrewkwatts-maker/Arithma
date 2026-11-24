@@ -92,6 +92,7 @@ fn expression_node_count_within(expr: &ArithmaExpression, budget: usize) -> Opti
         };
         match node {
             ArithmaExpression::Number(_)
+            | ArithmaExpression::Rational(_)
             | ArithmaExpression::Variable(_)
             | ArithmaExpression::Constant { .. } => {}
             ArithmaExpression::Function(_, args) => stack.extend(args.iter()),

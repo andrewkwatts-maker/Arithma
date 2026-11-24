@@ -1147,19 +1147,19 @@ mod tests {
     }
 
     #[test]
-    fn inexact_inverse_entries_stay_symbolic_quotients() {
+    fn inexact_inverse_entries_become_exact_rational_leaves() {
         // det = 10, so the entries are tenths. `checked_div_exact` refuses an
-        // inexact integer division, so each entry is kept as a quotient rather
-        // than collapsed to a rounded literal -- the value is only rounded at
-        // the point a caller asks for an f64.
+        // inexact integer division, so each entry is kept as an exact rational
+        // leaf rather than collapsed to a rounded literal -- the value is only
+        // rounded at the point a caller asks for an f64.
         let m = mat(&[&[4, 7], &[2, 6]]);
         let inv = m.inverse().expect("non-singular");
         assert_close(values(&inv), vec![0.6, -0.7, -0.2, 0.4]);
         assert!(
             inv.cells
                 .iter()
-                .any(|c| matches!(c, ArithmaExpression::Function(..))),
-            "an inexact entry must remain a quotient, not become a literal"
+                .any(|c| matches!(c, ArithmaExpression::Rational(_))),
+            "an inexact entry must become an exact rational leaf, not a rounded literal"
         );
     }
 

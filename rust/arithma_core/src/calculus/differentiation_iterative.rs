@@ -145,7 +145,9 @@ fn enter_node<'a>(
 ) -> Result<(), String> {
     debug_assert!(!var.is_empty(), "enter_node: empty variable");
     match node {
-        ArithmaExpression::Number(_) | ArithmaExpression::Constant { .. } => {
+        ArithmaExpression::Number(_)
+        | ArithmaExpression::Rational(_)
+        | ArithmaExpression::Constant { .. } => {
             results.push(ArithmaExpression::zero());
             Ok(())
         }
