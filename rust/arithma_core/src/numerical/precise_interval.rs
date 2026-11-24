@@ -254,8 +254,10 @@ impl Rational {
         a.cmp_integer(&b).ok_or_else(err)
     }
 
-    #[cfg(test)]
-    fn approx_f64(&self) -> f64 {
+    /// The value rounded to the nearest-ish `f64` (`num / den` after each
+    /// part is converted, so two roundings). `NaN` when either part is out of
+    /// `f64` range; never silently clamped.
+    pub fn to_f64(&self) -> f64 {
         self.num.to_f64() / self.den.to_f64()
     }
 }
@@ -455,6 +457,12 @@ impl PreciseInterval {
             lo: v.clone(),
             hi: v,
         }
+    }
+
+    /// The interval midpoint as an `f64`, via [`Rational::to_f64`]; the
+    /// rounding of the two bounds dominates its error, not the width.
+    pub fn mid_f64(&self) -> f64 {
+        0.5 * (self.lo.to_f64() + self.hi.to_f64())
     }
 
     /// True iff `0` lies in `[lo, hi]`.
@@ -1148,14 +1156,14 @@ mod tests {
         let iv = evaluate_precise(&sqrt5_expr(), &[], 200).expect("evaluate_precise must compute");
         let known = 5.0_f64.sqrt();
         assert!(
-            iv.lo.approx_f64() <= known + 1e-6,
+            iv.lo.to_f64() <= known + 1e-6,
             "lo = {}",
-            iv.lo.approx_f64()
+            iv.lo.to_f64()
         );
         assert!(
-            iv.hi.approx_f64() >= known - 1e-6,
+            iv.hi.to_f64() >= known - 1e-6,
             "hi = {}",
-            iv.hi.approx_f64()
+            iv.hi.to_f64()
         );
         // The exact square: lo^2 <= 5 <= hi^2.
         let five = Rational::from_i64(5).unwrap();
@@ -1227,7 +1235,7 @@ mod tests {
         let w = |bits: u32| {
             let iv =
                 evaluate_precise(&sqrt5_expr(), &[], bits).expect("evaluate_precise must compute");
-            iv.hi.sub(&iv.lo).unwrap().approx_f64()
+            iv.hi.sub(&iv.lo).unwrap().to_f64()
         };
         let w64 = w(64);
         let w128 = w(128);
