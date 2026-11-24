@@ -49,6 +49,7 @@
 //!   `SimplificationConfig` policy.
 
 pub mod compare;
+pub mod compiled;
 pub mod emit;
 mod emit_names;
 pub mod iterative;
@@ -891,8 +892,8 @@ impl Evaluable for ArithmaExpression {
                         return Err("evaluate: value stack underflow".into());
                     }
                     let start = values.len() - n;
-                    let args_slice: Vec<f64> = values.drain(start..).collect();
-                    let out = arithma_apply_function(func, &args_slice)?;
+                    let out = arithma_apply_function(func, &values[start..])?;
+                    values.truncate(start);
                     values.push(out);
                 }
                 Frame::CombineCond => {

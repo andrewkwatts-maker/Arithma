@@ -3,6 +3,14 @@
 
 ## [Unreleased]
 
+### Added -- `CompiledExpr`
+
+- Added `CompiledExpr` (`expression::compiled`): an expression compiled once
+  against an ordered variable list; `eval(&[f64])` allocates nothing on the Ok
+  path and matches `evaluate` bit for bit. Additive API (AR-SLOTS stage 1).
+- `evaluate` no longer allocates an argument vector per function node (2
+  allocations per call instead of 2 plus one per function node); same values.
+
 ### Added -- like-term collection
 
 `x + x -> 2*x`, `2*x + 3*x -> 5*x`, `3*x + (-3)*x -> 0`, `x * x -> x^2`,
