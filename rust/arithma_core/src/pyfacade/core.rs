@@ -377,7 +377,7 @@ fn arithma_integer_to_decimal_string(n: &ArithmaInteger) -> Option<String> {
         }
         digits.push(remainder as u8);
         // Trim trailing zero bytes for cheaper subsequent iterations.
-        while bytes.len() > 1 && *bytes.last().unwrap() == 0 {
+        while bytes.len() > 1 && bytes.last() == Some(&0) {
             bytes.pop();
         }
     }
@@ -426,7 +426,7 @@ fn arithma_integer_from_decimal_string(s: &str) -> Result<ArithmaInteger, String
         }
     }
     // Strip leading zero bytes (least significant is at index 0; trailing in vec).
-    while bytes.len() > 1 && *bytes.last().unwrap() == 0 {
+    while bytes.len() > 1 && bytes.last() == Some(&0) {
         bytes.pop();
     }
     let mut flags: u16 = 0;

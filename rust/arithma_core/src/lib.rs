@@ -27,6 +27,8 @@
 // coverage counts that Phase 4 is about to claim properly.
 #![allow(clippy::assertions_on_constants)]
 #![allow(clippy::const_is_empty)]
+// quality-gate: MP-ARI-9
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
 //! # arithma_core
 //!

@@ -607,12 +607,11 @@ pub fn evaluate_interval(
                 values.push(apply_interval_function(func, &arg_intervals)?);
             }
             Frame::CombineCond => {
-                if values.len() < 3 {
+                let (Some(else_iv), Some(then_iv), Some(cond_iv)) =
+                    (values.pop(), values.pop(), values.pop())
+                else {
                     return Err("evaluate_interval: conditional underflow".into());
-                }
-                let else_iv = values.pop().unwrap();
-                let then_iv = values.pop().unwrap();
-                let cond_iv = values.pop().unwrap();
+                };
                 // A condition interval pinned at exactly zero always takes the
                 // else branch; one that excludes zero always takes the then
                 // branch. Anything else could go either way, so union them.

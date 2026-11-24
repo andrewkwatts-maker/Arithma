@@ -129,7 +129,9 @@ impl ArithmaIterativeDifferentiator {
         if results.len() != 1 {
             return Err(format!("differentiate: final stack size {}", results.len()));
         }
-        Ok(results.pop().unwrap())
+        results
+            .pop()
+            .ok_or_else(|| "differentiate: final stack size 0".to_string())
     }
 }
 

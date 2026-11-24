@@ -878,12 +878,11 @@ impl Evaluable for ArithmaExpression {
                     values.push(out);
                 }
                 Frame::CombineCond => {
-                    if values.len() < 3 {
+                    let (Some(else_v), Some(then_v), Some(cond_v)) =
+                        (values.pop(), values.pop(), values.pop())
+                    else {
                         return Err("evaluate: conditional underflow".into());
-                    }
-                    let else_v = values.pop().unwrap();
-                    let then_v = values.pop().unwrap();
-                    let cond_v = values.pop().unwrap();
+                    };
                     values.push(if cond_v != 0.0 { then_v } else { else_v });
                 }
             }
